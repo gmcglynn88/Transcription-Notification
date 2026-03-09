@@ -261,7 +261,7 @@
   <div id="logo-container">
     <svg id="logo" viewBox="0 0 300 60" style="background:#f0f2f5; border-radius:30px; padding:8px;">
       <text x="20" y="40" font-family="Aptos, Segoe UI" font-size="26" fill="#2C3E50">Genesys Cloud</text>
-      <text x="190" y="40" font-family="Aptos" font-size="18" fill="#63AB8F" font-weight="bold">Transcription Notifications</text>
+      <text x="190" y="40" font-family="Aptos" font-size="18" fill="#63AB8F" font-weight="bold">Live Transcription Monitor</text>
     </svg>
   </div>
 
@@ -273,20 +273,20 @@
     <div id="messageContainer"></div>
 
     <div class="main-tab-container">
-      <button class="main-tab-button active" data-tab="tab-dashboard">Transcription Monitor</button>
-      <button class="main-tab-button" data-tab="tab-guide">API Blueprint Reference</button>
+      <button class="main-tab-button active" data-tab="tab-dashboard">Live Transcription Monitor</button>
+      <button class="main-tab-button" data-tab="tab-guide">Configuration Guide</button>
     </div>
 
     <div id="tab-dashboard" class="main-tab-content active">
       <div class="card">
-        <h2 class="section-title">🎙️ Transcription Notification Monitor</h2>
-        <p class="muted">Based on <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Genesys Cloud Transcription Notifications API</a></p>
+        <h2 class="section-title">🎙️ Live Transcription Notification Monitor</h2>
+        <p class="muted">Real-time monitoring using <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Genesys Cloud Transcription Notifications API</a></p>
         
         <!-- Queue selection dropdown -->
         <div style="max-width:500px; margin-bottom:20px;">
-          <label>Filter by Queues (conversation queues)</label>
+          <label>Monitor Queues (conversation queues)</label>
           <div id="queueSelector" class="checkbox-dropdown"></div>
-          <div class="muted" style="margin-top:4px;">Select queues to monitor for transcription notifications</div>
+          <div class="muted" style="margin-top:4px;">Select queues to receive transcription notifications from</div>
         </div>
 
         <!-- Selected queues display -->
@@ -296,15 +296,16 @@
 
         <div class="controls">
           <div style="flex:2;">
-            <label for="riskKeywords">Risk phrases to detect</label>
-            <input id="riskKeywords" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud, claim" placeholder="e.g. complaint, cancel, refund">
+            <label for="riskPhrases">Risk phrases to detect (comma separated)</label>
+            <input id="riskPhrases" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud" placeholder="e.g. complaint, lawsuit, cancel">
+            <div class="muted">Case-insensitive partial matching</div>
           </div>
           <div style="display: flex; gap: 8px; align-items: end;">
             <button id="subscribeBtn" class="full-width-btn" style="margin-top:0;">
               <span class="loading-spinner" style="display:none;"></span>
-              <span class="btn-text">🔔 Subscribe</span>
+              <span class="btn-text">🔔 Start Monitoring</span>
             </button>
-            <button id="unsubscribeBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>🔕 Unsubscribe</button>
+            <button id="unsubscribeBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>🔕 Stop Monitoring</button>
           </div>
         </div>
         
@@ -312,61 +313,72 @@
         <div class="refresh-section">
           <div class="channel-info">
             <div><strong>Channel ID:</strong> <span id="channelId">—</span></div>
-            <div><strong>Status:</strong> <span id="connectionStatus">Not subscribed</span></div>
+            <div><strong>Status:</strong> <span id="connectionStatus">Not connected</span></div>
             <div><strong>WebSocket:</strong> <span id="websocketState">Closed</span></div>
+            <div><strong>Active Queues:</strong> <span id="activeQueueCount">0</span></div>
           </div>
           <button id="refreshChannelBtn" class="full-width-btn refresh-btn" disabled>
             <span class="loading-spinner" style="display:none;"></span>
-            <span class="btn-text">🔄 Refresh</span>
+            <span class="btn-text">🔄 Reconnect</span>
           </button>
         </div>
       </div>
 
       <!-- Risk statistics -->
       <div class="card">
-        <h2 class="section-title">⚠️ Risk Events from Transcription Notifications</h2>
+        <h2 class="section-title">⚠️ Detected Risk Events</h2>
         <div class="kpis" style="grid-template-columns: repeat(4,1fr); margin-bottom: 20px;" id="riskStats">
-          <div class="kpi"><span class="label">High severity</span><span class="value" id="statHigh">0</span></div>
-          <div class="kpi"><span class="label">Medium</span><span class="value" id="statMed">0</span></div>
-          <div class="kpi"><span class="label">Low</span><span class="value" id="statLow">0</span></div>
-          <div class="kpi"><span class="label">Notifications</span><span class="value" id="statTotal">0</span></div>
+          <div class="kpi"><span class="label">Total Events</span><span class="value" id="statTotal">0</span></div>
+          <div class="kpi"><span class="label">Unique Conversations</span><span class="value" id="statConversations">0</span></div>
+          <div class="kpi"><span class="label">Agents</span><span class="value" id="statAgents">0</span></div>
+          <div class="kpi"><span class="label">Queues</span><span class="value" id="statQueues">0</span></div>
         </div>
 
         <div class="frozen-table-container">
           <table class="frozen-table" id="notificationTable">
             <thead>
               <tr>
-                <th>Timestamp</th><th>Conversation ID</th><th>Queue</th><th>Agent</th><th>Customer</th><th>Phrase</th><th>Severity</th><th>Transcript</th>
+                <th>Time</th><th>Conversation ID</th><th>Queue</th><th>Agent</th><th>Customer</th><th>Detected Phrase</th><th>Transcript</th>
               </tr>
             </thead>
             <tbody id="notificationTableBody">
-              <tr><td colspan="8" class="muted" style="text-align:center;">No notifications yet. Select queues and subscribe.</td></tr>
+              <tr><td colspan="7" class="muted" style="text-align:center;">No notifications yet. Select queues and click Start Monitoring.</td></tr>
             </tbody>
           </table>
         </div>
         
-        <div style="margin-top:12px; display: flex; gap: 10px;">
-          <button id="clearHistoryBtn" class="full-width-btn" style="background:var(--text-light); flex: 1;">Clear History</button>
-          <button id="testNotificationBtn" class="full-width-btn" style="background:var(--warn); flex: 1;">Generate Test</button>
+        <div style="margin-top:12px;">
+          <button id="clearHistoryBtn" class="full-width-btn" style="background:var(--text-light);">Clear Event History</button>
         </div>
       </div>
     </div>
 
     <div id="tab-guide" class="main-tab-content">
       <div class="card">
-        <h2 class="section-title">📘 Genesys Cloud Transcription Notifications API</h2>
+        <h2 class="section-title">📘 Production Configuration Guide</h2>
         <div style="background:var(--light-bg); padding:20px; border-radius:8px;">
-          <h3>Blueprint Implementation</h3>
-          <p>This app implements the <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Transcription Notifications API</a> following these steps:</p>
-          <ol>
-            <li><strong>POST /api/v2/notifications/channels</strong> - Create a notification channel</li>
-            <li><strong>GET /api/v2/notifications/channels</strong> - Verify channel</li>
-            <li><strong>PUT /api/v2/notifications/channels/{channelId}/subscriptions</strong> - Subscribe to <code>v2.speechandtextanalytics.transcription-notifications</code> topic</li>
-            <li><strong>WebSocket connection</strong> - Connect to the channel WebSocket to receive real-time notifications</li>
-            <li><strong>Refresh button</strong> - Manually reconnects WebSocket and resubscribes if needed</li>
-          </ol>
-          <p><strong>Region:</strong> mypurecloud.ie (Ireland)</p>
-          <p><strong>OAuth scopes:</strong> speech-and-text-analytics, notifications</p>
+          <h3>Required Permissions</h3>
+          <p>Ensure your OAuth client has these scopes:</p>
+          <ul>
+            <li><code>speech-and-text-analytics</code> - For transcription access</li>
+            <li><code>notifications</code> - For creating channels and WebSocket connections</li>
+            <li><code>routing:queue:view</code> - For fetching queue list</li>
+          </ul>
+
+          <h3>Transcription Requirements</h3>
+          <ul>
+            <li>Voice transcription must be enabled in your org</li>
+            <li>Enable per queue: <code>/api/v2/routing/queues/{queueId}/transcription</code></li>
+            <li>Only Genesys Cloud Voice or BYOC Cloud provide real-time transcription</li>
+            <li>BYOC Premises completes transcription after call ends</li>
+          </ul>
+
+          <h3>API Usage Notes</h3>
+          <ul>
+            <li>Each notification counts toward your rate limits</li>
+            <li>Channels expire after 24 hours - use Refresh button to recreate</li>
+            <li>WebSocket will auto-reconnect with exponential backoff</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -390,12 +402,8 @@
       let reconnectAttempts = 0;
       const maxReconnectAttempts = 5;
       
-      // Risk keywords with severity
-      const riskKeywords = {
-        high: ['lawsuit', 'breach', 'fraud', 'chargeback', 'policy violation', 'inappropriate'],
-        medium: ['complaint', 'cancel', 'supervisor', 'escalate', 'terminate', 'not happy'],
-        low: ['refund', 'delay', 'problem', 'issue', 'unhappy', 'disappointed']
-      };
+      // Risk phrases (customizable by user)
+      let riskPhrases = [];
 
       // Helper functions
       function $(id) { return document.getElementById(id); }
@@ -416,6 +424,11 @@
 
       function updateWebsocketState(state) {
         $('websocketState').innerText = state;
+      }
+
+      function updateActiveQueueCount() {
+        const selected = queueDropdown ? queueDropdown.getSelectedValues() : [];
+        $('activeQueueCount').innerText = selected.length;
       }
 
       // Create checkbox dropdown (from queue management app)
@@ -478,6 +491,7 @@
               updateSummary();
               updateSelectAllState();
               updateSelectedDisplay();
+              updateActiveQueueCount();
             });
             list.appendChild(row);
           });
@@ -518,6 +532,7 @@
           updateSummary();
           updateSelectAllState();
           updateSelectedDisplay();
+          updateActiveQueueCount();
         });
 
         selectAll.addEventListener('change', () => {
@@ -527,6 +542,7 @@
           updateSummary();
           updateSelectAllState();
           updateSelectedDisplay();
+          updateActiveQueueCount();
         });
 
         function setOptions(arr) {
@@ -536,6 +552,7 @@
           updateSummary();
           updateSelectAllState();
           updateSelectedDisplay();
+          updateActiveQueueCount();
         }
 
         function getSelectedValues() { return [...selected]; }
@@ -630,7 +647,7 @@
             const message = JSON.parse(event.data);
             // Handle notification - format from blueprint
             if (message.topicName === 'v2.speechandtextanalytics.transcription-notifications' && message.eventBody) {
-              processTranscriptionNotification(message.eventBody);
+              processLiveNotification(message.eventBody);
             }
           } catch (e) {
             console.error('Error processing WebSocket message', e);
@@ -662,12 +679,11 @@
         };
       }
 
-      // Process incoming transcription notification
-      function processTranscriptionNotification(notification) {
-        // Filter by selected queues if any
+      // Process live transcription notification
+      function processLiveNotification(notification) {
+        // Filter by selected queues
         const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
         if (selectedQueues.length > 0) {
-          // Check if conversation queue is in selected queues
           const queueId = notification.conversation?.queueId;
           if (!queueId || !selectedQueues.includes(queueId)) {
             return; // Skip notifications from non-selected queues
@@ -677,10 +693,10 @@
         // Extract transcript text
         const transcript = notification.transcript || '';
         
-        // Detect risk
-        const risk = detectRisk(transcript);
+        // Check for risk phrases
+        const detectedPhrase = detectRiskPhrase(transcript);
         
-        if (risk) {
+        if (detectedPhrase) {
           const notificationEvent = {
             id: notification.id || Date.now() + '-' + Math.random(),
             timestamp: notification.eventTime || new Date().toISOString(),
@@ -691,8 +707,7 @@
             agentName: notification.agent?.name || 'Unknown Agent',
             customer: notification.customer?.phone || notification.customer?.email || 'Unknown Customer',
             transcript: transcript,
-            phrase: risk.word,
-            severity: risk.severity
+            phrase: detectedPhrase
           };
           
           notifications.unshift(notificationEvent);
@@ -708,25 +723,15 @@
         return queue ? queue.name : queueId;
       }
 
-      function detectRisk(text) {
+      function detectRiskPhrase(text) {
+        if (!text || riskPhrases.length === 0) return null;
+        
         text = text.toLowerCase();
         
-        for (let word of riskKeywords.high) {
-          if (text.includes(word)) return { severity: 'high', word };
-        }
-        
-        for (let word of riskKeywords.medium) {
-          if (text.includes(word)) return { severity: 'medium', word };
-        }
-        
-        for (let word of riskKeywords.low) {
-          if (text.includes(word)) return { severity: 'low', word };
-        }
-        
-        // Check custom keywords from input
-        const customWords = $('riskKeywords').value.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-        for (let word of customWords) {
-          if (text.includes(word)) return { severity: 'low', word };
+        for (let phrase of riskPhrases) {
+          if (text.includes(phrase.toLowerCase())) {
+            return phrase;
+          }
         }
         
         return null;
@@ -735,31 +740,27 @@
       function renderNotifications() {
         const tbody = $('notificationTableBody');
         if (!notifications.length) {
-          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;">No notifications yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;">No risk events detected yet.</td></tr>';
           return;
         }
         
         const rows = notifications.map(n => {
-          let severityClass = n.severity === 'high' ? 'badge-fatal' : (n.severity === 'medium' ? 'badge-critical' : 'badge-ok');
-          let rowClass = n.severity === 'high' ? 'risk-high' : (n.severity === 'medium' ? 'risk-medium' : 'risk-low');
-          
           const time = new Date(n.timestamp).toLocaleTimeString('en-GB');
           const shortConvId = n.conversationId.substring(0, 8) + '...';
           
-          // Highlight risk words
+          // Highlight detected phrase
           const highlighted = n.transcript.replace(
             new RegExp(`(${n.phrase})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
           
-          return `<tr class="${rowClass}">
+          return `<tr>
             <td>${time}</td>
             <td title="${n.conversationId}">${shortConvId}</td>
             <td>${n.queueName}</td>
             <td>${n.agentName}</td>
             <td>${n.customer}</td>
             <td><span class="pill">${n.phrase}</span></td>
-            <td><span class="badge ${severityClass}">${n.severity}</span></td>
             <td><div class="transcript-preview">${highlighted}</div></td>
           </tr>`;
         }).join('');
@@ -768,14 +769,15 @@
       }
 
       function updateStats() {
-        const high = notifications.filter(n => n.severity === 'high').length;
-        const med = notifications.filter(n => n.severity === 'medium').length;
-        const low = notifications.filter(n => n.severity === 'low').length;
-        
-        $('statHigh').innerText = high;
-        $('statMed').innerText = med;
-        $('statLow').innerText = low;
         $('statTotal').innerText = notifications.length;
+        
+        const uniqueConversations = new Set(notifications.map(n => n.conversationId)).size;
+        const uniqueAgents = new Set(notifications.map(n => n.agentId)).size;
+        const uniqueQueues = new Set(notifications.map(n => n.queueId)).size;
+        
+        $('statConversations').innerText = uniqueConversations;
+        $('statAgents').innerText = uniqueAgents;
+        $('statQueues').innerText = uniqueQueues;
       }
 
       function enableRefreshButton(enabled) {
@@ -794,7 +796,7 @@
         const btnText = btn.querySelector('.btn-text');
         
         spinner.style.display = 'inline-block';
-        btnText.textContent = 'Refreshing...';
+        btnText.textContent = 'Reconnecting...';
         btn.disabled = true;
 
         try {
@@ -827,7 +829,7 @@
           }
         } finally {
           spinner.style.display = 'none';
-          btnText.textContent = '🔄 Refresh';
+          btnText.textContent = '🔄 Reconnect';
           btn.disabled = false;
         }
       }
@@ -837,6 +839,15 @@
         const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
         if (selectedQueues.length === 0) {
           showMessage('Please select at least one queue to monitor', 'error');
+          return;
+        }
+
+        // Parse risk phrases
+        const phrasesInput = $('riskPhrases').value;
+        riskPhrases = phrasesInput.split(',').map(p => p.trim().toLowerCase()).filter(p => p);
+        
+        if (riskPhrases.length === 0) {
+          showMessage('Please enter at least one risk phrase', 'error');
           return;
         }
 
@@ -855,7 +866,7 @@
           notificationChannel = channel;
           $('channelId').innerText = channel.id;
 
-          // Step 2: Verify channel (optional, just get it)
+          // Step 2: Verify channel
           await getChannel(channel.id);
 
           // Step 3: Subscribe to transcription notifications topic
@@ -871,7 +882,7 @@
           enableRefreshButton(true);
           $('connectionStatus').innerText = 'Connecting...';
           
-          showMessage('Successfully subscribed to transcription notifications', 'success');
+          showMessage('Successfully subscribed to live transcription notifications', 'success');
         } catch (err) {
           showMessage('Failed to subscribe: ' + err.message, 'error');
           console.error(err);
@@ -879,7 +890,7 @@
           enableRefreshButton(false);
         } finally {
           spinner.style.display = 'none';
-          btnText.textContent = '🔔 Subscribe';
+          btnText.textContent = '🔔 Start Monitoring';
         }
       }
 
@@ -890,48 +901,12 @@
         }
         notificationChannel = null;
         $('channelId').innerText = '—';
-        $('connectionStatus').innerText = 'Not subscribed';
+        $('connectionStatus').innerText = 'Not connected';
         updateWebsocketState('Closed');
         $('subscribeBtn').disabled = false;
         $('unsubscribeBtn').disabled = true;
         enableRefreshButton(false);
-        showMessage('Unsubscribed from notifications', 'success');
-      }
-
-      // Generate test notification (for demo purposes)
-      function generateTestNotification() {
-        const testPhrases = [
-          "I want to cancel my service immediately",
-          "This is a complaint about your service",
-          "If you don't refund I will file a chargeback",
-          "We need to escalate this to legal",
-          "Fraud alert on my account"
-        ];
-        
-        const randomPhrase = testPhrases[Math.floor(Math.random() * testPhrases.length)];
-        const risk = detectRisk(randomPhrase);
-        
-        if (risk) {
-          const testNotification = {
-            id: 'test-' + Date.now(),
-            timestamp: new Date().toISOString(),
-            conversationId: 'test-conv-' + Math.floor(Math.random() * 1000),
-            queueId: queueDropdown?.getSelectedValues()[0] || 'test-queue',
-            queueName: 'Test Queue',
-            agentId: 'test-agent',
-            agentName: 'Test Agent',
-            customer: '+353 87 123 4567',
-            transcript: randomPhrase,
-            phrase: risk.word,
-            severity: risk.severity
-          };
-          
-          notifications.unshift(testNotification);
-          if (notifications.length > 100) notifications.pop();
-          renderNotifications();
-          updateStats();
-          showMessage('Test notification generated', 'success');
-        }
+        showMessage('Stopped monitoring', 'success');
       }
 
       // OAuth handling
@@ -991,9 +966,8 @@
             renderNotifications();
             updateStats();
           });
-          $('testNotificationBtn').addEventListener('click', generateTestNotification);
           
-          showMessage(`Loaded ${availableQueues.length} queues`, 'success');
+          showMessage(`Loaded ${availableQueues.length} queues from your org`, 'success');
         } catch (err) {
           showMessage('Failed to initialize: ' + err.message, 'error');
         }
