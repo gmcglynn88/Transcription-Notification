@@ -258,6 +258,88 @@
     #debugLog .log-success { color: #4ec9b0; }
     #debugLog .log-warn { color: #ce9178; }
     #debugLog .log-error { color: #f44747; }
+
+    /* ── Risk Filter Bar ─────────────────────────────────────────────────── */
+    .risk-filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      background: var(--light-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .risk-filter-bar label {
+      font-weight: 600;
+      font-size: 13px;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .risk-filter-toggles {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .risk-filter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .risk-filter-toggle input[type=checkbox] {
+      display: none;
+    }
+    .risk-filter-toggle.filter-low {
+      background: #f0fdf4;
+      color: #14532d;
+      border-color: #bbf7d0;
+    }
+    .risk-filter-toggle.filter-medium {
+      background: #fef9c3;
+      color: #713f12;
+      border-color: #fde68a;
+    }
+    .risk-filter-toggle.filter-high {
+      background: #fee2e2;
+      color: #7f1d1d;
+      border-color: #fecaca;
+    }
+    .risk-filter-toggle.filter-inactive {
+      opacity: 0.35;
+      filter: grayscale(0.6);
+    }
+    .risk-filter-count {
+      background: rgba(0,0,0,0.1);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 11px;
+    }
+    .filter-all-btn {
+      padding: 5px 12px;
+      font-size: 13px;
+      background: #fff;
+      color: var(--text-light);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-left: auto;
+    }
+    .filter-all-btn:hover { background: var(--light-bg); color: var(--text-color); }
+    .filter-result-count {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
@@ -336,6 +418,24 @@
           <div class="kpi"><span class="label">Unique Conversations</span><span class="value" id="statConversations">0</span></div>
           <div class="kpi"><span class="label">Agents</span><span class="value" id="statAgents">0</span></div>
           <div class="kpi"><span class="label">Queues</span><span class="value" id="statQueues">0</span></div>
+        </div>
+
+        <!-- Risk filter bar -->
+        <div class="risk-filter-bar">
+          <label>Filter by Risk:</label>
+          <div class="risk-filter-toggles">
+            <label class="risk-filter-toggle filter-low" id="filterToggleLow" title="Show Low risk events">
+              <input type="checkbox" id="filterLow" checked> 🟢 Low <span class="risk-filter-count" id="countLow">0</span>
+            </label>
+            <label class="risk-filter-toggle filter-medium" id="filterToggleMedium" title="Show Medium risk events">
+              <input type="checkbox" id="filterMedium" checked> 🟡 Medium <span class="risk-filter-count" id="countMedium">0</span>
+            </label>
+            <label class="risk-filter-toggle filter-high" id="filterToggleHigh" title="Show High risk events">
+              <input type="checkbox" id="filterHigh" checked> 🔴 High <span class="risk-filter-count" id="countHigh">0</span>
+            </label>
+          </div>
+          <button class="filter-all-btn" id="filterAllBtn">Show All</button>
+          <span class="filter-result-count" id="filterResultCount"></span>
         </div>
 
         <div class="events-table-container">
@@ -440,6 +540,14 @@
             <li>BYOC Premises completes transcription after call ends</li>
           </ul>
 
+          <h3>Agent Name Resolution</h3>
+          <ul>
+            <li>Agent names are resolved using <code>GET /api/v2/users/{userId}</code></li>
+            <li>The conversations API returns <code>userId</code> on agent participants — names are fetched and cached automatically</li>
+            <li>Names are cached per session to minimise API calls</li>
+            <li>If a name is still showing "Unknown Agent", check the user has a <code>userId</code> in the participant record via the Debug Log</li>
+          </ul>
+
           <h3>API Usage Notes</h3>
           <ul>
             <li>Each notification counts toward your rate limits</li>
@@ -469,13 +577,16 @@
       let notifications       = [];
       let reconnectAttempts   = 0;
       let isMonitoring        = false;
-      let trackedConvIds      = new Set();   // conversation IDs we've subscribed to
-      let convQueueMap        = {};          // conversationId → queueId lookup
-      let convParticipantMap  = {};          // conversationId → { agentName, agentId, customer } lookup
-      let selectedQueuesCache = [];          // cache so reconnect knows which queues
+      let trackedConvIds      = new Set();
+      let convQueueMap        = {};
+      let convParticipantMap  = {};
+      let selectedQueuesCache = [];
       const maxReconnectAttempts = 5;
 
-      // Default phrases — each has a phrase string and a risk level: low | medium | high
+      // Active risk filter set — which levels are currently shown
+      let activeRiskFilters = new Set(['low', 'medium', 'high']);
+
+      // Default phrases
       let riskPhrases = [
         { phrase: 'complaint',  level: 'medium' },
         { phrase: 'lawsuit',    level: 'high'   },
@@ -576,10 +687,10 @@
         const lbl = $('statusLabel');
         if (!dot) return;
         dot.className = 'status-dot';
-        if (state === 'Connected')      { dot.classList.add('status-dot-on');         lbl.textContent = 'Connected'; }
+        if (state === 'Connected')        { dot.classList.add('status-dot-on');         lbl.textContent = 'Connected'; }
         else if (state === 'Connecting…') { dot.classList.add('status-dot-connecting'); lbl.textContent = 'Connecting…'; }
-        else if (state === 'Error')     { dot.classList.add('status-dot-error');      lbl.textContent = 'Error'; }
-        else                            { dot.classList.add('status-dot-off');        lbl.textContent = 'Not connected'; }
+        else if (state === 'Error')       { dot.classList.add('status-dot-error');      lbl.textContent = 'Error'; }
+        else                              { dot.classList.add('status-dot-off');        lbl.textContent = 'Not connected'; }
       }
 
       function updateActiveQueueCount() {
@@ -596,6 +707,49 @@
       }
 
       function enableRefreshButton(enabled) { $('refreshChannelBtn').disabled = !enabled; }
+
+      // ── Risk Filter ───────────────────────────────────────────────────────────
+      function setupRiskFilters() {
+        ['low','medium','high'].forEach(level => {
+          const toggle = $(`filterToggle${level.charAt(0).toUpperCase() + level.slice(1)}`);
+          const cb = $(`filter${level.charAt(0).toUpperCase() + level.slice(1)}`);
+
+          toggle.addEventListener('click', () => {
+            if (activeRiskFilters.has(level)) {
+              // Only deactivate if at least one other filter remains active
+              if (activeRiskFilters.size > 1) {
+                activeRiskFilters.delete(level);
+                cb.checked = false;
+                toggle.classList.add('filter-inactive');
+              }
+            } else {
+              activeRiskFilters.add(level);
+              cb.checked = true;
+              toggle.classList.remove('filter-inactive');
+            }
+            renderNotifications();
+          });
+        });
+
+        $('filterAllBtn').addEventListener('click', () => {
+          activeRiskFilters = new Set(['low', 'medium', 'high']);
+          ['low','medium','high'].forEach(level => {
+            const toggle = $(`filterToggle${level.charAt(0).toUpperCase() + level.slice(1)}`);
+            const cb = $(`filter${level.charAt(0).toUpperCase() + level.slice(1)}`);
+            cb.checked = true;
+            toggle.classList.remove('filter-inactive');
+          });
+          renderNotifications();
+        });
+      }
+
+      function updateFilterCounts() {
+        const counts = { low: 0, medium: 0, high: 0 };
+        notifications.forEach(n => { if (counts[n.riskLevel] !== undefined) counts[n.riskLevel]++; });
+        $('countLow').textContent    = counts.low;
+        $('countMedium').textContent = counts.medium;
+        $('countHigh').textContent   = counts.high;
+      }
 
       // ── Queue Dropdown ───────────────────────────────────────────────────────
       function createQueueDropdown(containerId, { placeholder, searchPlaceholder }) {
@@ -703,30 +857,73 @@
         return all;
       }
 
-      // Fetch user details by ID with caching
+      // Fetch user details by userId — returns display name
       async function fetchUserDetails(userId) {
-        if (!userId || userId === 'unknown') return 'Unknown Agent';
-        
-        // Check cache first
-        if (userCache[userId]) {
-          return userCache[userId];
-        }
-        
+        if (!userId || userId === 'unknown') return null;
+        if (userCache[userId] !== undefined) return userCache[userId];
+
+        // Mark as in-flight to avoid duplicate requests
+        userCache[userId] = null;
+
         try {
           const res = await fetch(`https://api.${region}/api/v2/users/${userId}`, { headers: authHeaders() });
           if (!res.ok) {
-            userCache[userId] = 'Unknown Agent';
-            return 'Unknown Agent';
+            log(`User fetch returned ${res.status} for ${userId}`, 'warn');
+            userCache[userId] = null;
+            return null;
           }
           const user = await res.json();
-          const userName = user.name || 'Unknown Agent';
-          userCache[userId] = userName;
-          return userName;
+          // Prefer name, fall back to email prefix
+          const name = user.name || (user.email ? user.email.split('@')[0] : null);
+          userCache[userId] = name || null;
+          log(`Resolved user ${userId} → ${name}`, 'info');
+          return name;
         } catch (e) {
           log(`Failed to fetch user ${userId}: ${e.message}`, 'warn');
-          userCache[userId] = 'Unknown Agent';
-          return 'Unknown Agent';
+          userCache[userId] = null;
+          return null;
         }
+      }
+
+      // Fetch full conversation details to get participant info including agent userId
+      async function fetchConversationDetails(convId) {
+        try {
+          const res = await fetch(`https://api.${region}/api/v2/conversations/calls/${convId}`, { headers: authHeaders() });
+          if (!res.ok) {
+            // Try the generic conversations endpoint as fallback
+            const res2 = await fetch(`https://api.${region}/api/v2/conversations/${convId}`, { headers: authHeaders() });
+            if (!res2.ok) return null;
+            return await res2.json();
+          }
+          return await res.json();
+        } catch(e) {
+          log(`Failed to fetch conversation ${convId}: ${e.message}`, 'warn');
+          return null;
+        }
+      }
+
+      // Extract agent userId from a participant list, trying multiple known field paths
+      function extractAgentUserId(participant) {
+        return participant.userId
+          || participant.user?.id
+          || (participant.attributes && participant.attributes.userId)
+          || null;
+      }
+
+      // Extract best available agent name from participant, before async lookup
+      function extractAgentNameSync(participant) {
+        return participant.name
+          || participant.user?.name
+          || null;
+      }
+
+      // Extract customer display name from a participant
+      function extractCustomerName(participant) {
+        return participant.name
+          || participant.externalContact?.name
+          || participant.address
+          || participant.ani
+          || null;
       }
 
       // Poll for active voice calls in the selected queues
@@ -743,55 +940,85 @@
             if (!convId || trackedConvIds.has(convId)) continue;
 
             let matchedQueueId = null;
-            let agentId = null;
-            let agentName = 'Unknown Agent';
-            let customerName = 'Unknown Customer';
+            let agentId        = null;
+            let agentName      = null;
+            let customerName   = null;
 
             if (conv.participants && Array.isArray(conv.participants)) {
               for (const p of conv.participants) {
-                // Try multiple places to find queue ID
-                const qId = p.queueId || p.queue?.id || (p.queue && typeof p.queue === 'object' ? p.queue.id : null);
+                // Queue matching — try all known paths
+                const qId = p.queueId
+                  || p.queue?.id
+                  || (p.queue && typeof p.queue === 'object' ? p.queue.id : null);
                 if (qId && selectedQueuesCache.includes(qId)) {
                   matchedQueueId = qId;
                 }
-                
-                // Find agent information - try multiple fields
+
                 if (p.purpose === 'agent') {
-                  agentId = p.userId || p.id || (p.user ? p.user.id : null);
-                  agentName = p.name || p.user?.name || 'Unknown Agent';
-                  
-                  // If we have a userId but no name, try to fetch it in background
-                  if (agentId && (!agentName || agentName === 'Unknown Agent' || agentName === null)) {
-                    fetchUserDetails(agentId).then(name => {
-                      if (convParticipantMap[convId]) {
-                        convParticipantMap[convId].agentName = name;
-                        // Re-render notifications to update the display
-                        renderNotifications();
-                      }
-                    });
-                  }
+                  // Try to get userId — most reliable for name lookup
+                  agentId   = extractAgentUserId(p);
+                  // Also try to grab a sync name in case participant has it
+                  agentName = extractAgentNameSync(p);
+                  log(`Agent participant found — userId: ${agentId}, syncName: ${agentName}`, 'info');
                 }
-                
-                // Find customer information
+
                 if (p.purpose === 'customer' || p.purpose === 'external') {
-                  customerName = p.name || p.externalContact?.name || p.address || p.ani || 'Unknown Customer';
+                  customerName = extractCustomerName(p);
                 }
               }
             }
 
             if (!matchedQueueId) continue; // not in a monitored queue
 
-            // Store mappings
+            // Store mappings with what we have synchronously
             convQueueMap[convId] = matchedQueueId;
             convParticipantMap[convId] = {
-              agentId: agentId || 'unknown',
-              agentName: agentName,
-              customer: customerName
+              agentId:   agentId   || 'unknown',
+              agentName: agentName || null,
+              customer:  customerName || 'Unknown Customer',
             };
 
             trackedConvIds.add(convId);
             updateTrackedConversations();
-            log(`Poll found active call: ${convId} in queue ${getQueueName(matchedQueueId)} — subscribing`, 'success');
+            log(`Poll found active call: ${convId} in queue ${getQueueName(matchedQueueId)}`, 'success');
+
+            // ── Async agent name resolution ───────────────────────────────────
+            // If we have a userId, fetch the name from Users API (most reliable)
+            if (agentId && agentId !== 'unknown') {
+              fetchUserDetails(agentId).then(resolvedName => {
+                if (resolvedName && convParticipantMap[convId]) {
+                  convParticipantMap[convId].agentName = resolvedName;
+                  renderNotifications(); // update table if events already logged
+                }
+              });
+            } else if (!agentName) {
+              // No userId and no sync name — fetch full conversation details as fallback
+              // This can expose userId that the list endpoint sometimes omits
+              fetchConversationDetails(convId).then(detail => {
+                if (!detail) return;
+                const participants = detail.participants || [];
+                for (const p of participants) {
+                  if (p.purpose === 'agent') {
+                    const uid = extractAgentUserId(p);
+                    const syncName = extractAgentNameSync(p);
+                    log(`Fallback detail — userId: ${uid}, syncName: ${syncName}`, 'info');
+                    if (uid && uid !== 'unknown') {
+                      fetchUserDetails(uid).then(name => {
+                        if (name && convParticipantMap[convId]) {
+                          convParticipantMap[convId].agentId   = uid;
+                          convParticipantMap[convId].agentName = name;
+                          renderNotifications();
+                        }
+                      });
+                    } else if (syncName && convParticipantMap[convId]) {
+                      convParticipantMap[convId].agentName = syncName;
+                      renderNotifications();
+                    }
+                    break;
+                  }
+                }
+              });
+            }
 
             try {
               await postSubscriptions(notificationChannel.id, [`v2.conversations.${convId}.transcription`]);
@@ -809,7 +1036,6 @@
 
       function startPolling() {
         stopPolling();
-        // Run immediately, then every 5 seconds
         pollActiveCallsInQueues();
         pollInterval = setInterval(pollActiveCallsInQueues, 5000);
         log('Started polling for active calls every 5s', 'info');
@@ -871,16 +1097,11 @@
             const topic   = message.topicName || '';
             const body    = message.eventBody  || {};
 
-            // Dump EVERYTHING to console so nothing is invisible
             console.log('[WS RAW]', topic, message);
-
-            // Always log raw topic so you can see what's arriving
             log(`MSG: ${topic}`);
 
-            // Heartbeat
             if (topic === 'channel.metadata') { log('Heartbeat ♥', 'info'); return; }
 
-            // ── Transcription notification ────────────────────────────────────
             if (topic.startsWith('v2.conversations.') && topic.endsWith('.transcription')) {
               log(`Transcription event: ${topic}`, 'success');
               console.log('Transcription body:', JSON.stringify(body, null, 2));
@@ -888,7 +1109,6 @@
               return;
             }
 
-            // Any other topic
             log(`Unhandled topic: ${topic}`, 'warn');
 
           } catch (e) {
@@ -897,7 +1117,7 @@
           }
         };
 
-        webSocket.onerror = (error) => {
+        webSocket.onerror = () => {
           log('WebSocket error', 'error');
           updateWebsocketState('Error');
           showMessage('WebSocket connection error', 'error');
@@ -923,21 +1143,17 @@
 
       // ── Process Transcription ────────────────────────────────────────────────
       function processTranscriptionNotification(body, topic) {
-        // Extract conversationId — try all known field locations
         const conversationId = body.conversationId
           || body.id
-          || (topic.split('.')[2])   // v2.conversations.{id}.transcription → index 2
+          || (topic.split('.')[2])
           || 'unknown';
 
-        // Build transcript text
         let transcriptText = '';
         let channel = 'UNKNOWN';
 
         if (body.transcripts && Array.isArray(body.transcripts)) {
           body.transcripts.forEach(segment => {
             channel = segment.channel || channel;
-
-            // Shape A — alternatives array
             if (segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0) {
               const best = segment.alternatives[0];
               if (best.words && Array.isArray(best.words)) {
@@ -945,13 +1161,9 @@
               } else if (typeof best.transcript === 'string') {
                 transcriptText += best.transcript + ' ';
               }
-            }
-            // Shape B — direct words array
-            else if (segment.words && Array.isArray(segment.words)) {
+            } else if (segment.words && Array.isArray(segment.words)) {
               transcriptText += segment.words.map(w => w.word || '').join(' ') + ' ';
-            }
-            // Shape C — flat transcript string on the segment
-            else if (typeof segment.transcript === 'string') {
+            } else if (typeof segment.transcript === 'string') {
               transcriptText += segment.transcript + ' ';
             }
           });
@@ -964,16 +1176,14 @@
 
         log(`Transcript [${channel}]: "${transcriptText.substring(0, 60)}${transcriptText.length > 60 ? '…' : ''}"`, 'info');
 
-        // Risk phrase check
         const detected = detectRiskPhrase(transcriptText);
         if (!detected) return;
 
-        // Look up queue and participant info from our stored maps
-        const queueId     = convQueueMap[conversationId]        || null;
-        const participant = convParticipantMap[conversationId]  || {};
-        const agentId     = participant.agentId                 || 'unknown';
-        const agentName   = participant.agentName               || 'Unknown Agent';
-        const customer    = participant.customer                || 'Unknown Customer';
+        const queueId     = convQueueMap[conversationId]       || null;
+        const participant = convParticipantMap[conversationId] || {};
+        const agentId     = participant.agentId                || 'unknown';
+        const agentName   = participant.agentName              || 'Resolving…';
+        const customer    = participant.customer               || 'Unknown Customer';
 
         const notifEvent = {
           id:             Date.now() + '-' + Math.random(),
@@ -993,6 +1203,25 @@
         log(`⚠️ RISK [${detected.level.toUpperCase()}] "${detected.phrase}" in conversation ${conversationId}`, 'warn');
         notifications.unshift(notifEvent);
         if (notifications.length > 200) notifications.pop();
+
+        // If agent name is still not resolved, try to resolve now
+        if (agentId && agentId !== 'unknown' && (!participant.agentName || participant.agentName === 'Resolving…')) {
+          fetchUserDetails(agentId).then(name => {
+            if (name) {
+              // Update all existing notifications for this conversation
+              notifications.forEach(n => {
+                if (n.conversationId === conversationId && (!n.agentName || n.agentName === 'Resolving…')) {
+                  n.agentName = name;
+                }
+              });
+              if (convParticipantMap[conversationId]) {
+                convParticipantMap[conversationId].agentName = name;
+              }
+              renderNotifications();
+            }
+          });
+        }
+
         renderNotifications();
         updateStats();
       }
@@ -1014,11 +1243,31 @@
 
       function renderNotifications() {
         const tbody = $('notificationTableBody');
-        if (!notifications.length) {
-          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:20px;">No risk events detected yet.</td></tr>';
+
+        // Apply risk filter
+        const filtered = notifications.filter(n => activeRiskFilters.has(n.riskLevel));
+
+        // Update filter counts on every render
+        updateFilterCounts();
+
+        // Update result count label
+        const countEl = $('filterResultCount');
+        if (notifications.length > 0 && filtered.length < notifications.length) {
+          countEl.textContent = `Showing ${filtered.length} of ${notifications.length} events`;
+        } else {
+          countEl.textContent = '';
+        }
+
+        if (!filtered.length) {
+          if (!notifications.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:20px;">No risk events detected yet.</td></tr>';
+          } else {
+            tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:20px;">No events match the current filter. Try enabling more risk levels above.</td></tr>';
+          }
           return;
         }
-        tbody.innerHTML = notifications.map(n => {
+
+        tbody.innerHTML = filtered.map(n => {
           const time      = new Date(n.timestamp).toLocaleTimeString('en-GB');
           const lc        = levelConfig[n.riskLevel] || levelConfig.medium;
           const genesysUrl = `https://apps.${region}/directory/#/analytics/interactions/${n.conversationId}/admin`;
@@ -1026,15 +1275,18 @@
             new RegExp(`(${n.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
-          
+          const displayAgent = n.agentName && n.agentName !== 'Resolving…'
+            ? escapeHtml(n.agentName)
+            : `<span style="color:var(--text-light);font-style:italic;">${escapeHtml(n.agentName || 'Unknown Agent')}</span>`;
+
           return `<tr class="risk-row-${n.riskLevel}">
             <td class="col-time">${time}</td>
             <td class="col-risk"><span class="risk-badge risk-badge-${n.riskLevel}">${lc.icon} ${lc.label}</span></td>
             <td class="col-conv"><a href="${genesysUrl}" target="_blank" title="Open interaction ${n.conversationId}" class="conv-link">Go to Interaction ↗</a></td>
             <td class="col-queue" title="${n.queueName}">${n.queueName}</td>
-            <td class="col-agent" title="${n.agentName}">${n.agentName}</td>
-            <td class="col-cust" title="${n.customer || '—'}">${n.customer || '—'}</td>
-            <td class="col-phrase"><span class="badge badge-info">${n.phrase}</span></td>
+            <td class="col-agent" title="${n.agentName || ''}">${displayAgent}</td>
+            <td class="col-cust" title="${n.customer || '—'}">${escapeHtml(n.customer || '—')}</td>
+            <td class="col-phrase"><span class="badge badge-info">${escapeHtml(n.phrase)}</span></td>
             <td class="col-transcript"><div class="transcript-preview">${highlighted}</div></td>
           </tr>`;
         }).join('');
@@ -1051,8 +1303,7 @@
       async function handleSubscribe() {
         const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
         if (!selectedQueues.length) { showMessage('Please select at least one queue to monitor', 'error'); return; }
-
-        if (!riskPhrases.length) { showMessage('Please add at least one risk phrase in the ⚠️ Risk Phrases tab', 'error'); return; }
+        if (!riskPhrases.length)    { showMessage('Please add at least one risk phrase in the ⚠️ Risk Phrases tab', 'error'); return; }
 
         selectedQueuesCache = [...selectedQueues];
 
@@ -1064,23 +1315,21 @@
         btn.disabled          = true;
 
         try {
-          // Step 1: Create channel
           log('Creating notification channel…', 'info');
           const channel = await createNotificationChannel();
           notificationChannel = channel;
           log(`Channel created: ${channel.id}`, 'success');
 
-          // Step 2: Connect WebSocket
           connectWebSocket(channel.connectUri);
 
-          // Step 3: Start polling the Conversations API for active voice calls
           isMonitoring = true;
           trackedConvIds.clear();
           updateTrackedConversations();
           startPolling();
 
-          $('subscribeBtn').disabled  = true;
+          $('subscribeBtn').disabled   = true;
           $('unsubscribeBtn').disabled = false;
+          $('manualSubBtn').disabled   = false;
           enableRefreshButton(true);
           updateWebsocketState('Connecting…');
 
@@ -1106,8 +1355,9 @@
         convParticipantMap = {};
         updateTrackedConversations();
         updateWebsocketState('Closed');
-        $('subscribeBtn').disabled       = false;
-        $('unsubscribeBtn').disabled     = true;
+        $('subscribeBtn').disabled   = false;
+        $('unsubscribeBtn').disabled = true;
+        $('manualSubBtn').disabled   = true;
         enableRefreshButton(false);
         showMessage('Stopped monitoring', 'success');
         log('Monitoring stopped', 'warn');
@@ -1127,12 +1377,10 @@
           log('Refreshing channel…', 'info');
           if (webSocket) { webSocket.close(); webSocket = null; }
 
-          // Re-subscribe to queue topics (PUT resets all subscriptions cleanly)
           const queueTopics = selectedQueuesCache.map(qId => `v2.routing.queues.${qId}.conversations.calls`);
           await putSubscriptions(notificationChannel.id, queueTopics);
           log('Queue subscriptions restored', 'success');
 
-          // Re-subscribe to any conversations we were already tracking
           if (trackedConvIds.size > 0) {
             const convTopics = [...trackedConvIds].map(id => `v2.conversations.${id}.transcription`);
             await postSubscriptions(notificationChannel.id, convTopics);
@@ -1165,8 +1413,8 @@
         token        = params.get('access_token');
 
         if (!token) {
-          token       = sessionStorage.getItem('purecloud_token');
-          const exp   = sessionStorage.getItem('purecloud_token_exp');
+          token     = sessionStorage.getItem('purecloud_token');
+          const exp = sessionStorage.getItem('purecloud_token_exp');
           if (token && exp && Date.now() < parseInt(exp)) {
             // still valid
           } else {
@@ -1182,7 +1430,7 @@
           history.replaceState(null, document.title, window.location.pathname);
         }
 
-        $('authCard').style.display  = 'none';
+        $('authCard').style.display   = 'none';
         $('appContent').style.display = 'block';
         initializeApp();
       }
@@ -1227,15 +1475,12 @@
           });
 
           $('clearPhrasesBtn').addEventListener('click', () => {
-            if (confirm('Clear all risk phrases?')) {
-              riskPhrases = [];
-              renderPhraseList();
-            }
+            if (confirm('Clear all risk phrases?')) { riskPhrases = []; renderPhraseList(); }
           });
 
           renderPhraseList();
+          setupRiskFilters();
 
-          // Manual conv ID — toggle panel visibility
           $('manualSubBtn').addEventListener('click', () => {
             const panel = $('manualConvPanel');
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -1243,8 +1488,8 @@
 
           $('manualSubConfirmBtn').addEventListener('click', async () => {
             const convId = $('manualConvId').value.trim();
-            if (!convId) { showMessage('Enter a conversation ID first', 'error'); return; }
-            if (!notificationChannel) { showMessage('Start monitoring first', 'error'); return; }
+            if (!convId)                    { showMessage('Enter a conversation ID first', 'error'); return; }
+            if (!notificationChannel)       { showMessage('Start monitoring first', 'error'); return; }
             if (trackedConvIds.has(convId)) { showMessage('Already subscribed to that conversation', 'info'); return; }
             try {
               trackedConvIds.add(convId);
