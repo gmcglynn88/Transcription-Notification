@@ -588,15 +588,15 @@
 
       // Default phrases
       let riskPhrases = [
-        { phrase: 'complaint',  level: 'medium' },
-        { phrase: 'lawsuit',    level: 'high'   },
+        { phrase: 'complain',  level: 'medium' },
+        { phrase: 'legal action',    level: 'high'   },
         { phrase: 'cancel',     level: 'low'    },
         { phrase: 'refund',     level: 'low'    },
         { phrase: 'chargeback', level: 'high'   },
-        { phrase: 'supervisor', level: 'medium' },
+        { phrase: 'manager', level: 'medium' },
         { phrase: 'escalate',   level: 'medium' },
-        { phrase: 'terminate',  level: 'high'   },
-        { phrase: 'breach',     level: 'high'   },
+        { phrase: 'Vulnerable',  level: 'high'   },
+        { phrase: 'Suicide',     level: 'high'   },
         { phrase: 'fraud',      level: 'high'   },
       ];
 
@@ -711,20 +711,20 @@
       // ── Risk Filter ───────────────────────────────────────────────────────────
       function setupRiskFilters() {
         ['low','medium','high'].forEach(level => {
-          const toggle = $(`filterToggle${level.charAt(0).toUpperCase() + level.slice(1)}`);
-          const cb = $(`filter${level.charAt(0).toUpperCase() + level.slice(1)}`);
+          const cap    = level.charAt(0).toUpperCase() + level.slice(1);
+          const toggle = $(`filterToggle${cap}`);
 
-          toggle.addEventListener('click', () => {
-            if (activeRiskFilters.has(level)) {
-              // Only deactivate if at least one other filter remains active
-              if (activeRiskFilters.size > 1) {
-                activeRiskFilters.delete(level);
-                cb.checked = false;
-                toggle.classList.add('filter-inactive');
-              }
+          // Use mousedown + preventDefault to avoid the label→checkbox double-fire issue.
+          // We manage active state entirely in JS, no checkbox state relied upon.
+          toggle.addEventListener('click', (e) => {
+            e.preventDefault(); // stop label from toggling the hidden checkbox
+            const isActive = activeRiskFilters.has(level);
+            if (isActive) {
+              if (activeRiskFilters.size <= 1) return; // must keep at least one
+              activeRiskFilters.delete(level);
+              toggle.classList.add('filter-inactive');
             } else {
               activeRiskFilters.add(level);
-              cb.checked = true;
               toggle.classList.remove('filter-inactive');
             }
             renderNotifications();
@@ -734,10 +734,8 @@
         $('filterAllBtn').addEventListener('click', () => {
           activeRiskFilters = new Set(['low', 'medium', 'high']);
           ['low','medium','high'].forEach(level => {
-            const toggle = $(`filterToggle${level.charAt(0).toUpperCase() + level.slice(1)}`);
-            const cb = $(`filter${level.charAt(0).toUpperCase() + level.slice(1)}`);
-            cb.checked = true;
-            toggle.classList.remove('filter-inactive');
+            const cap = level.charAt(0).toUpperCase() + level.slice(1);
+            $(`filterToggle${cap}`).classList.remove('filter-inactive');
           });
           renderNotifications();
         });
