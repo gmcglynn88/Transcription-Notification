@@ -334,6 +334,8 @@
       let reconnectAttempts   = 0;
       let isMonitoring        = false;
       let trackedConvIds      = new Set();   // conversation IDs we've subscribed to
+      let convQueueMap        = {};          // conversationId → queueId lookup
+      let convParticipantMap  = {};          // conversationId → { agentName, agentId, customer } lookup
       let selectedQueuesCache = [];          // cache so reconnect knows which queues
       const maxReconnectAttempts = 5;
       let riskPhrases = [];
@@ -538,44 +540,84 @@
             const topic   = message.topicName || '';
             const body    = message.eventBody  || {};
 
+            // Always log raw topic so you can see what's arriving
             log(`MSG: ${topic}`);
 
-            // ── FIX: Stage 1 — call arrived in a monitored queue ─────────────
-            // Topic format: v2.routing.queues.{queueId}.conversations.calls
+            // Heartbeat
+            if (topic === 'channel.metadata') { log('Heartbeat ♥', 'info'); return; }
+
+            // ── Stage 1 — call arrived in a monitored queue ──────────────────
+            // Topic: v2.routing.queues.{queueId}.conversations.calls
+            // The queueId is embedded in the topic itself, which is reliable.
+            // The eventBody.id is the conversationId (it can also appear as body.id
+            // or within body.participants[].calls[].id in some SDK versions — we
+            // try all known locations defensively).
             if (topic.startsWith('v2.routing.queues.') && topic.endsWith('.conversations.calls')) {
-              const conversationId = body.id;
-              if (conversationId && !trackedConvIds.has(conversationId)) {
+              // Extract queueId from topic: v2.routing.queues.{queueId}.conversations.calls
+              const topicParts = topic.split('.');
+              // parts: ['v2','routing','queues','{queueId}','conversations','calls']
+              const queueId = topicParts[3];
+
+              // conversationId: Genesys puts it at eventBody.id
+              const conversationId = body.id || body.conversationId;
+
+              log(`Queue event — queueId: ${queueId}, conversationId: ${conversationId}, raw body keys: ${Object.keys(body).join(', ')}`, 'info');
+
+              if (!conversationId) {
+                log('⚠ Could not extract conversationId from queue event body. Full body logged to console.', 'warn');
+                console.warn('Queue event body:', JSON.stringify(body, null, 2));
+                return;
+              }
+
+              // Store conv→queue mapping for later display
+              convQueueMap[conversationId] = queueId;
+
+              // Extract participant info while we have it
+              if (body.participants && Array.isArray(body.participants)) {
+                const agent    = body.participants.find(p => p.purpose === 'agent');
+                const customer = body.participants.find(p => p.purpose === 'customer' || p.purpose === 'external');
+                convParticipantMap[conversationId] = {
+                  agentId:   agent?.userId   || agent?.id   || 'unknown',
+                  agentName: agent?.name     || 'Unknown Agent',
+                  customer:  customer?.address || customer?.name || 'Unknown Customer'
+                };
+              }
+
+              if (!trackedConvIds.has(conversationId)) {
                 trackedConvIds.add(conversationId);
                 updateTrackedConversations();
-                log(`New conversation detected: ${conversationId} — subscribing to transcription`, 'success');
+                log(`New conversation: ${conversationId} in queue ${queueId} — subscribing to transcription`, 'success');
 
-                // ── FIX: Stage 2 — subscribe to this conversation's transcription ──
-                // Topic format: v2.conversations.{conversationId}.transcription
+                // Stage 2: subscribe to this conversation's transcription topic
+                // Topic: v2.conversations.{conversationId}.transcription
                 try {
                   await postSubscriptions(notificationChannel.id, [
                     `v2.conversations.${conversationId}.transcription`
                   ]);
-                  log(`Subscribed to transcription for ${conversationId}`, 'success');
+                  log(`✓ Subscribed to transcription for ${conversationId}`, 'success');
                 } catch (e) {
-                  log(`Failed to subscribe to transcription: ${e.message}`, 'error');
+                  log(`✗ Failed to subscribe to transcription: ${e.message}`, 'error');
                 }
               }
               return;
             }
 
-            // ── FIX: Stage 2 — live transcription notification ───────────────
-            // Topic format: v2.conversations.{conversationId}.transcription
+            // ── Stage 2 — live transcription notification ────────────────────
+            // Topic: v2.conversations.{conversationId}.transcription
             if (topic.startsWith('v2.conversations.') && topic.endsWith('.transcription')) {
-              log(`Transcription received for topic: ${topic}`, 'info');
+              log(`Transcription event on: ${topic}`, 'success');
+              // Log full body to console for debugging payload shape
+              console.log('Transcription body:', JSON.stringify(body, null, 2));
               processTranscriptionNotification(body, topic);
               return;
             }
 
-            // Heartbeat / other system messages
-            if (topic === 'channel.metadata') { log('Heartbeat', 'info'); }
+            // Any other topic — log it so nothing is invisible
+            log(`Unhandled topic: ${topic}`, 'warn');
 
           } catch (e) {
             log(`Error processing message: ${e.message}`, 'error');
+            console.error('Raw event data:', event.data);
           }
         };
 
@@ -606,43 +648,74 @@
       }
 
       // ── Process Transcription ────────────────────────────────────────────────
-      // FIX: Updated field mapping to match actual Genesys transcription event body.
-      // The eventBody for v2.conversations.{id}.transcription contains:
-      //   { conversationId, transcripts: [{ channel, words: [{ word, confidence }] }] }
+      // Genesys transcription eventBody shape (v2.conversations.{id}.transcription):
+      // {
+      //   id: "conv-uuid",                    ← conversationId (also appears as conversationId)
+      //   transcripts: [{
+      //     channel: "CUSTOMER" | "AGENT" | "UNKNOWN",
+      //     isFinal: true|false,
+      //     alternatives: [{
+      //       confidence: 0.9,
+      //       words: [{ word: "hello", confidence: 0.9, offsetMs: 0, durationMs: 300 }]
+      //     }]
+      //   }]
+      // }
       function processTranscriptionNotification(body, topic) {
-        // Extract conversationId from either body field or the topic itself
+        // Extract conversationId — try all known field locations
         const conversationId = body.conversationId
-          || topic.split('.')[2]   // v2.conversations.{id}.transcription
+          || body.id
+          || topic.split('.')[2]   // v2.conversations.{id}.transcription → index 2
           || 'unknown';
 
-        // Build transcript text from word array
+        // Build transcript text — handle both payload shapes Genesys has used:
+        //   Shape A (current): transcripts[].alternatives[].words[].word
+        //   Shape B (older):   transcripts[].words[].word
         let transcriptText = '';
-        let channel = 'unknown';
+        let channel = 'UNKNOWN';
 
         if (body.transcripts && Array.isArray(body.transcripts)) {
           body.transcripts.forEach(segment => {
             channel = segment.channel || channel;
-            if (segment.words && Array.isArray(segment.words)) {
+
+            // Shape A — alternatives array
+            if (segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0) {
+              const best = segment.alternatives[0]; // highest confidence alternative
+              if (best.words && Array.isArray(best.words)) {
+                transcriptText += best.words.map(w => w.word || '').join(' ') + ' ';
+              } else if (typeof best.transcript === 'string') {
+                transcriptText += best.transcript + ' ';
+              }
+            }
+            // Shape B — direct words array
+            else if (segment.words && Array.isArray(segment.words)) {
               transcriptText += segment.words.map(w => w.word || '').join(' ') + ' ';
+            }
+            // Shape C — flat transcript string on the segment
+            else if (typeof segment.transcript === 'string') {
+              transcriptText += segment.transcript + ' ';
             }
           });
         } else if (typeof body.transcript === 'string') {
-          // Fallback in case Genesys sends a flat string
           transcriptText = body.transcript;
         }
 
         transcriptText = transcriptText.trim();
-        if (!transcriptText) { log('Empty transcript segment, skipping', 'info'); return; }
+        if (!transcriptText) { log('Empty transcript segment — skipping', 'info'); return; }
 
-        // Check risk phrases
+        log(`Transcript [${channel}]: "${transcriptText.substring(0, 60)}${transcriptText.length > 60 ? '…' : ''}"`, 'info');
+
+        // Risk phrase check
         const detectedPhrase = detectRiskPhrase(transcriptText);
         if (!detectedPhrase) return;
 
-        const queueId   = body.queueId   || getQueueForConversation(conversationId);
-        const agentId   = body.agentId   || (body.participants && body.participants.find(p => p.purpose === 'agent')?.userId) || 'unknown';
-        const agentName = body.agentName || (body.participants && body.participants.find(p => p.purpose === 'agent')?.name)   || 'Unknown Agent';
+        // Look up queue and participant info from our stored maps
+        const queueId    = convQueueMap[conversationId]           || null;
+        const participant = convParticipantMap[conversationId]    || {};
+        const agentId    = participant.agentId                    || 'unknown';
+        const agentName  = participant.agentName                  || 'Unknown Agent';
+        const customer   = participant.customer                   || 'Unknown Customer';
 
-        const event = {
+        const notifEvent = {
           id:             Date.now() + '-' + Math.random(),
           timestamp:      body.eventTime || new Date().toISOString(),
           conversationId,
@@ -650,22 +723,18 @@
           queueName:      getQueueName(queueId),
           agentId,
           agentName,
+          customer,
           channel,
           transcript:     transcriptText,
           phrase:         detectedPhrase
         };
 
         log(`⚠️ RISK DETECTED: "${detectedPhrase}" in conversation ${conversationId}`, 'warn');
-        notifications.unshift(event);
+        notifications.unshift(notifEvent);
         if (notifications.length > 200) notifications.pop();
         renderNotifications();
         updateStats();
       }
-
-      // Simple lookup: find which queue a conversation belongs to based on what
-      // queue topics fired for it (tracked in trackedConvIds as conversationId only;
-      // for a full impl you'd store a map of convId → queueId from Stage 1 body).
-      function getQueueForConversation(convId) { return null; }
 
       function getQueueName(queueId) {
         if (!queueId) return 'Unknown';
@@ -700,7 +769,7 @@
             <td title="${n.conversationId}">${shortId}</td>
             <td>${n.queueName}</td>
             <td>${n.agentName}</td>
-            <td>${n.channel}</td>
+            <td>${n.customer || '—'}</td>
             <td><span class="badge badge-info">${n.phrase}</span></td>
             <td><div class="transcript-preview">${highlighted}</div></td>
           </tr>`;
@@ -778,6 +847,8 @@
         if (webSocket) { webSocket.close(); webSocket = null; }
         notificationChannel = null;
         trackedConvIds.clear();
+        convQueueMap       = {};
+        convParticipantMap = {};
         updateTrackedConversations();
         $('channelId').innerText        = '—';
         $('connectionStatus').innerText = 'Not connected';
