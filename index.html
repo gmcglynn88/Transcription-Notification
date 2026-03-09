@@ -232,6 +232,29 @@
 
     .loading-spinner{display:inline-block;width:20px;height:20px;border:2px solid #f3f3f3;border-top:2px solid var(--primary-color);border-radius:50%;animation:spin 1s linear infinite;margin-right:8px}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+    /* Refresh button styling */
+    .refresh-section {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      margin-top: 16px;
+    }
+    .refresh-btn {
+      background: var(--text-light);
+      min-width: 120px;
+    }
+    .refresh-btn:hover {
+      background: #5a6268;
+    }
+    .channel-info {
+      flex: 1;
+      background: var(--light-bg);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -259,7 +282,7 @@
         <h2 class="section-title">🎙️ Transcription Notification Monitor</h2>
         <p class="muted">Based on <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Genesys Cloud Transcription Notifications API</a></p>
         
-        <!-- Queue selection dropdown (styled like queue management app) -->
+        <!-- Queue selection dropdown -->
         <div style="max-width:500px; margin-bottom:20px;">
           <label>Filter by Queues (conversation queues)</label>
           <div id="queueSelector" class="checkbox-dropdown"></div>
@@ -279,15 +302,23 @@
           <div style="display: flex; gap: 8px; align-items: end;">
             <button id="subscribeBtn" class="full-width-btn" style="margin-top:0;">
               <span class="loading-spinner" style="display:none;"></span>
-              <span class="btn-text">🔔 Subscribe to Notifications</span>
+              <span class="btn-text">🔔 Subscribe</span>
             </button>
             <button id="unsubscribeBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>🔕 Unsubscribe</button>
           </div>
         </div>
         
-        <div style="margin-top: 8px;">
-          <span class="badge badge-info">Status: <span id="connectionStatus">Not subscribed</span></span>
-          <span class="badge badge-info">Notification channel: <span id="channelId">—</span></span>
+        <!-- Channel info with refresh button -->
+        <div class="refresh-section">
+          <div class="channel-info">
+            <div><strong>Channel ID:</strong> <span id="channelId">—</span></div>
+            <div><strong>Status:</strong> <span id="connectionStatus">Not subscribed</span></div>
+            <div><strong>WebSocket:</strong> <span id="websocketState">Closed</span></div>
+          </div>
+          <button id="refreshChannelBtn" class="full-width-btn refresh-btn" disabled>
+            <span class="loading-spinner" style="display:none;"></span>
+            <span class="btn-text">🔄 Refresh</span>
+          </button>
         </div>
       </div>
 
@@ -314,8 +345,9 @@
           </table>
         </div>
         
-        <div style="margin-top:12px;">
-          <button id="clearHistoryBtn" class="full-width-btn" style="background:var(--text-light);">Clear History</button>
+        <div style="margin-top:12px; display: flex; gap: 10px;">
+          <button id="clearHistoryBtn" class="full-width-btn" style="background:var(--text-light); flex: 1;">Clear History</button>
+          <button id="testNotificationBtn" class="full-width-btn" style="background:var(--warn); flex: 1;">Generate Test</button>
         </div>
       </div>
     </div>
@@ -331,7 +363,7 @@
             <li><strong>GET /api/v2/notifications/channels</strong> - Verify channel</li>
             <li><strong>PUT /api/v2/notifications/channels/{channelId}/subscriptions</strong> - Subscribe to <code>v2.speechandtextanalytics.transcription-notifications</code> topic</li>
             <li><strong>WebSocket connection</strong> - Connect to the channel WebSocket to receive real-time notifications</li>
-            <li><strong>Notification format:</strong> Each notification contains conversation details, transcript, and risk detection</li>
+            <li><strong>Refresh button</strong> - Manually reconnects WebSocket and resubscribes if needed</li>
           </ol>
           <p><strong>Region:</strong> mypurecloud.ie (Ireland)</p>
           <p><strong>OAuth scopes:</strong> speech-and-text-analytics, notifications</p>
@@ -355,6 +387,8 @@
       let notificationChannel = null;
       let webSocket = null;
       let notifications = [];
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
       
       // Risk keywords with severity
       const riskKeywords = {
@@ -378,6 +412,10 @@
           Authorization: `Bearer ${token}`, 
           'Content-Type': 'application/json'
         };
+      }
+
+      function updateWebsocketState(state) {
+        $('websocketState').innerText = state;
       }
 
       // Create checkbox dropdown (from queue management app)
@@ -577,10 +615,14 @@
         }
 
         webSocket = new WebSocket(connectUri);
+        updateWebsocketState('Connecting...');
         
         webSocket.onopen = () => {
           console.log('WebSocket connected');
           $('connectionStatus').innerText = 'Connected';
+          updateWebsocketState('Connected');
+          reconnectAttempts = 0;
+          enableRefreshButton(true);
         };
         
         webSocket.onmessage = (event) => {
@@ -598,12 +640,25 @@
         webSocket.onerror = (error) => {
           console.error('WebSocket error', error);
           $('connectionStatus').innerText = 'Error';
+          updateWebsocketState('Error');
           showMessage('WebSocket connection error', 'error');
         };
         
         webSocket.onclose = () => {
           console.log('WebSocket closed');
           $('connectionStatus').innerText = 'Disconnected';
+          updateWebsocketState('Closed');
+          
+          // Attempt to reconnect if we're still subscribed
+          if ($('subscribeBtn').disabled && reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            showMessage(`Reconnecting... attempt ${reconnectAttempts}/${maxReconnectAttempts}`, 'info');
+            setTimeout(() => {
+              if (notificationChannel) {
+                connectWebSocket(notificationChannel.connectUri);
+              }
+            }, 3000 * reconnectAttempts); // Exponential backoff
+          }
         };
       }
 
@@ -723,6 +778,60 @@
         $('statTotal').innerText = notifications.length;
       }
 
+      function enableRefreshButton(enabled) {
+        $('refreshChannelBtn').disabled = !enabled;
+      }
+
+      // Refresh function - manually reconnect/resubscribe
+      async function handleRefresh() {
+        if (!notificationChannel) {
+          showMessage('No active channel to refresh', 'error');
+          return;
+        }
+
+        const btn = $('refreshChannelBtn');
+        const spinner = btn.querySelector('.loading-spinner');
+        const btnText = btn.querySelector('.btn-text');
+        
+        spinner.style.display = 'inline-block';
+        btnText.textContent = 'Refreshing...';
+        btn.disabled = true;
+
+        try {
+          showMessage('Refreshing notification channel...', 'info');
+          
+          // Close existing WebSocket
+          if (webSocket) {
+            webSocket.close();
+            webSocket = null;
+          }
+
+          // Verify channel still exists
+          await getChannel(notificationChannel.id);
+
+          // Resubscribe to ensure subscription is active
+          await subscribeToTranscriptionNotifications(notificationChannel.id);
+
+          // Reconnect WebSocket
+          connectWebSocket(notificationChannel.connectUri);
+
+          showMessage('Channel refreshed successfully', 'success');
+        } catch (err) {
+          showMessage('Failed to refresh: ' + err.message, 'error');
+          // If channel is dead, force new subscription
+          if (err.message.includes('404') || err.message.includes('403')) {
+            notificationChannel = null;
+            $('subscribeBtn').disabled = false;
+            $('unsubscribeBtn').disabled = true;
+            enableRefreshButton(false);
+          }
+        } finally {
+          spinner.style.display = 'none';
+          btnText.textContent = '🔄 Refresh';
+          btn.disabled = false;
+        }
+      }
+
       // Subscribe button handler - implements full blueprint flow
       async function handleSubscribe() {
         const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
@@ -759,16 +868,18 @@
           // Update UI
           $('subscribeBtn').disabled = true;
           $('unsubscribeBtn').disabled = false;
+          enableRefreshButton(true);
           $('connectionStatus').innerText = 'Connecting...';
           
           showMessage('Successfully subscribed to transcription notifications', 'success');
         } catch (err) {
           showMessage('Failed to subscribe: ' + err.message, 'error');
           console.error(err);
+          btn.disabled = false;
+          enableRefreshButton(false);
         } finally {
           spinner.style.display = 'none';
-          btnText.textContent = '🔔 Subscribe to Notifications';
-          btn.disabled = false;
+          btnText.textContent = '🔔 Subscribe';
         }
       }
 
@@ -780,9 +891,47 @@
         notificationChannel = null;
         $('channelId').innerText = '—';
         $('connectionStatus').innerText = 'Not subscribed';
+        updateWebsocketState('Closed');
         $('subscribeBtn').disabled = false;
         $('unsubscribeBtn').disabled = true;
+        enableRefreshButton(false);
         showMessage('Unsubscribed from notifications', 'success');
+      }
+
+      // Generate test notification (for demo purposes)
+      function generateTestNotification() {
+        const testPhrases = [
+          "I want to cancel my service immediately",
+          "This is a complaint about your service",
+          "If you don't refund I will file a chargeback",
+          "We need to escalate this to legal",
+          "Fraud alert on my account"
+        ];
+        
+        const randomPhrase = testPhrases[Math.floor(Math.random() * testPhrases.length)];
+        const risk = detectRisk(randomPhrase);
+        
+        if (risk) {
+          const testNotification = {
+            id: 'test-' + Date.now(),
+            timestamp: new Date().toISOString(),
+            conversationId: 'test-conv-' + Math.floor(Math.random() * 1000),
+            queueId: queueDropdown?.getSelectedValues()[0] || 'test-queue',
+            queueName: 'Test Queue',
+            agentId: 'test-agent',
+            agentName: 'Test Agent',
+            customer: '+353 87 123 4567',
+            transcript: randomPhrase,
+            phrase: risk.word,
+            severity: risk.severity
+          };
+          
+          notifications.unshift(testNotification);
+          if (notifications.length > 100) notifications.pop();
+          renderNotifications();
+          updateStats();
+          showMessage('Test notification generated', 'success');
+        }
       }
 
       // OAuth handling
@@ -836,11 +985,13 @@
           // Set up event listeners
           $('subscribeBtn').addEventListener('click', handleSubscribe);
           $('unsubscribeBtn').addEventListener('click', handleUnsubscribe);
+          $('refreshChannelBtn').addEventListener('click', handleRefresh);
           $('clearHistoryBtn').addEventListener('click', () => {
             notifications = [];
             renderNotifications();
             updateStats();
           });
+          $('testNotificationBtn').addEventListener('click', generateTestNotification);
           
           showMessage(`Loaded ${availableQueues.length} queues`, 'success');
         } catch (err) {
