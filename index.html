@@ -7,7 +7,7 @@
     :root{ --primary-color:#63AB8F; --secondary-color:#4A8C7D; --border-color:#DEE2E6;
       --light-bg:#F8F9FA; --card-bg:#FFFFFF; --text-color:#2C3E50; --text-light:#6C757D; --pill:#e9f6f0;
       --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; }
-    body{font-family:'Aptos','Segoe UI',system-ui,-apple-system,Arial,sans-serif;margin:20px;padding:20px;max-width:1400px;background:var(--light-bg);color:var(--text-color)}
+    body{font-family:'Aptos','Segoe UI',system-ui,-apple-system,Arial,sans-serif;margin:20px;padding:20px;max-width:1600px;background:var(--light-bg);color:var(--text-color)}
     #logo-container{text-align:center;margin-bottom:20px} #logo{width:300px}
     h1{margin:0 0 16px}
     .card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;padding:24px;margin-top:16px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
@@ -52,26 +52,24 @@
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
     .status-divider { color: var(--border-color); }
 
-    /* ── Events table — full width, no horizontal scroll ───────────────── */
+    /* ── Events table — improved column widths ──────────────────────────── */
     .events-table-container {
       width: 100%;
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      overflow: hidden;
+      overflow-x: auto; /* Allow horizontal scroll only when needed */
       margin-top: 10px;
     }
     .events-table {
       width: 100%;
       border-collapse: collapse;
-      table-layout: fixed;
+      min-width: 1200px; /* Ensure table has minimum width */
     }
     .events-table th, .events-table td {
-      padding: 8px 10px;
+      padding: 12px 15px;
       text-align: left;
       border-bottom: 1px solid var(--border-color);
-      vertical-align: top;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      vertical-align: middle;
     }
     .events-table thead th {
       background: var(--primary-color);
@@ -81,20 +79,20 @@
       position: sticky;
       top: 0;
     }
-    /* Column widths */
-    .events-table .col-time    { width: 70px; white-space: nowrap; }
-    .events-table .col-risk    { width: 90px; }
-    .events-table .col-conv    { width: 90px; }
-    .events-table .col-queue   { width: 130px; }
-    .events-table .col-agent   { width: 120px; }
-    .events-table .col-cust    { width: 120px; }
-    .events-table .col-phrase  { width: 110px; }
-    .events-table .col-transcript { width: auto; }
+    /* Improved column widths - more space for important columns */
+    .events-table .col-time    { width: 80px; white-space: nowrap; }
+    .events-table .col-risk    { width: 100px; }
+    .events-table .col-conv    { width: 120px; }
+    .events-table .col-queue   { width: 150px; min-width: 120px; }
+    .events-table .col-agent   { width: 150px; min-width: 120px; }
+    .events-table .col-cust    { width: 150px; min-width: 120px; }
+    .events-table .col-phrase  { width: 120px; }
+    .events-table .col-transcript { width: auto; min-width: 350px; }
     .events-table td.col-transcript {
       white-space: normal;
       word-break: break-word;
     }
-    .events-table tr:hover td { filter: brightness(0.97); }
+    .events-table tr:hover td { background-color: rgba(99,171,143,.05); }
 
     .main-tab-container {
       display: flex;
@@ -129,9 +127,9 @@
       background: #f9f9fc;
       border-radius: 8px;
       padding: 12px;
-      margin: 8px 0;
+      margin: 0;
       border-left: 3px solid var(--primary-color);
-      max-width: 600px;
+      max-width: 100%;
       white-space: pre-wrap;
       font-family: monospace;
     }
@@ -701,10 +699,21 @@
         return all;
       }
 
+      // Fetch user details by ID
+      async function fetchUserDetails(userId) {
+        if (!userId || userId === 'unknown') return 'Unknown Agent';
+        try {
+          const res = await fetch(`https://api.${region}/api/v2/users/${userId}`, { headers: authHeaders() });
+          if (!res.ok) return 'Unknown Agent';
+          const user = await res.json();
+          return user.name || 'Unknown Agent';
+        } catch (e) {
+          log(`Failed to fetch user ${userId}: ${e.message}`, 'warn');
+          return 'Unknown Agent';
+        }
+      }
+
       // Poll for active voice calls in the selected queues.
-      // The queue push notification topic (v2.routing.queues.{id}.conversations.calls)
-      // does NOT fire for voice — it is only listed for chat/email/message etc.
-      // For voice we must poll GET /api/v2/conversations/calls and filter by queue.
       async function pollActiveCallsInQueues() {
         if (!isMonitoring || !notificationChannel) return;
         try {
@@ -719,12 +728,31 @@
 
             // Find which queue this conversation is in
             let matchedQueueId = null;
+            let agentId = null;
+            let agentName = 'Unknown Agent';
+            let customerName = 'Unknown Customer';
+
             if (conv.participants && Array.isArray(conv.participants)) {
               for (const p of conv.participants) {
                 const qId = p.queue?.id || p.queueId;
                 if (qId && selectedQueuesCache.includes(qId)) {
                   matchedQueueId = qId;
-                  break;
+                }
+                if (p.purpose === 'agent') {
+                  agentId = p.userId || p.id;
+                  agentName = p.name || 'Unknown Agent';
+                  // If we have a userId but no name, try to fetch it
+                  if (agentId && (!agentName || agentName === 'Unknown Agent')) {
+                    // Don't await - fetch in background
+                    fetchUserDetails(agentId).then(name => {
+                      if (convParticipantMap[convId]) {
+                        convParticipantMap[convId].agentName = name;
+                      }
+                    });
+                  }
+                }
+                if (p.purpose === 'customer' || p.purpose === 'external') {
+                  customerName = p.name || p.address || p.ani || 'Unknown Customer';
                 }
               }
             }
@@ -733,12 +761,10 @@
 
             // Store mappings
             convQueueMap[convId] = matchedQueueId;
-            const agent    = conv.participants?.find(p => p.purpose === 'agent');
-            const customer = conv.participants?.find(p => p.purpose === 'customer' || p.purpose === 'external');
             convParticipantMap[convId] = {
-              agentId:   agent?.userId || agent?.id || 'unknown',
-              agentName: agent?.name   || 'Unknown Agent',
-              customer:  customer?.address || customer?.name || 'Unknown Customer'
+              agentId: agentId || 'unknown',
+              agentName: agentName,
+              customer: customerName
             };
 
             trackedConvIds.add(convId);
@@ -777,12 +803,8 @@
         return await res.json();
       }
 
-      // ── FIX: Use POST (additive) not PUT (replaces all) ──────────────────────
-      // PUT /subscriptions replaces ALL subscriptions — use it only for the initial
-      // queue topics. Use POST for each new per-conversation transcription topic
-      // so we don't wipe the queue subscriptions we depend on.
       async function putSubscriptions(channelId, topics) {
-        const body = topics.map(t => ({ id: t }));   // FIX: removed invalid `state: 'Enabled'`
+        const body = topics.map(t => ({ id: t }));
         const res = await fetch(
           `https://api.${region}/api/v2/notifications/channels/${channelId}/subscriptions`,
           { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) }
@@ -795,7 +817,7 @@
       }
 
       async function postSubscriptions(channelId, topics) {
-        const body = topics.map(t => ({ id: t }));   // POST is additive — won't replace existing
+        const body = topics.map(t => ({ id: t }));
         const res = await fetch(
           `https://api.${region}/api/v2/notifications/channels/${channelId}/subscriptions`,
           { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }
@@ -837,8 +859,6 @@
             if (topic === 'channel.metadata') { log('Heartbeat ♥', 'info'); return; }
 
             // ── Transcription notification ────────────────────────────────────
-            // Topic: v2.conversations.{conversationId}.transcription
-            // Conversations are discovered by polling; we subscribe here dynamically.
             if (topic.startsWith('v2.conversations.') && topic.endsWith('.transcription')) {
               log(`Transcription event: ${topic}`, 'success');
               console.log('Transcription body:', JSON.stringify(body, null, 2));
@@ -880,28 +900,14 @@
       }
 
       // ── Process Transcription ────────────────────────────────────────────────
-      // Genesys transcription eventBody shape (v2.conversations.{id}.transcription):
-      // {
-      //   id: "conv-uuid",                    ← conversationId (also appears as conversationId)
-      //   transcripts: [{
-      //     channel: "CUSTOMER" | "AGENT" | "UNKNOWN",
-      //     isFinal: true|false,
-      //     alternatives: [{
-      //       confidence: 0.9,
-      //       words: [{ word: "hello", confidence: 0.9, offsetMs: 0, durationMs: 300 }]
-      //     }]
-      //   }]
-      // }
       function processTranscriptionNotification(body, topic) {
         // Extract conversationId — try all known field locations
         const conversationId = body.conversationId
           || body.id
-          || topic.split('.')[2]   // v2.conversations.{id}.transcription → index 2
+          || (topic.split('.')[2])   // v2.conversations.{id}.transcription → index 2
           || 'unknown';
 
-        // Build transcript text — handle both payload shapes Genesys has used:
-        //   Shape A (current): transcripts[].alternatives[].words[].word
-        //   Shape B (older):   transcripts[].words[].word
+        // Build transcript text
         let transcriptText = '';
         let channel = 'UNKNOWN';
 
@@ -911,7 +917,7 @@
 
             // Shape A — alternatives array
             if (segment.alternatives && Array.isArray(segment.alternatives) && segment.alternatives.length > 0) {
-              const best = segment.alternatives[0]; // highest confidence alternative
+              const best = segment.alternatives[0];
               if (best.words && Array.isArray(best.words)) {
                 transcriptText += best.words.map(w => w.word || '').join(' ') + ' ';
               } else if (typeof best.transcript === 'string') {
@@ -945,7 +951,7 @@
         const participant = convParticipantMap[conversationId]  || {};
         const agentId     = participant.agentId                 || 'unknown';
         const agentName   = participant.agentName               || 'Unknown Agent';
-        const customer    = participant.customer                 || 'Unknown Customer';
+        const customer    = participant.customer                || 'Unknown Customer';
 
         const notifEvent = {
           id:             Date.now() + '-' + Math.random(),
@@ -979,7 +985,7 @@
         if (!text || !riskPhrases.length) return null;
         const lower = text.toLowerCase();
         for (const p of riskPhrases) {
-          if (lower.includes(p.phrase)) return p; // return the full { phrase, level } object
+          if (lower.includes(p.phrase)) return p;
         }
         return null;
       }
@@ -994,7 +1000,6 @@
           const time      = new Date(n.timestamp).toLocaleTimeString('en-GB');
           const shortId   = n.conversationId.substring(0, 8) + '…';
           const lc        = levelConfig[n.riskLevel] || levelConfig.medium;
-          // Correct Genesys interaction URL format
           const genesysUrl = `https://apps.${region}/directory/#/analytics/interactions/${n.conversationId}/admin`;
           const highlighted = n.transcript.replace(
             new RegExp(`(${n.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
@@ -1043,12 +1048,10 @@
           notificationChannel = channel;
           log(`Channel created: ${channel.id}`, 'success');
 
-          // Step 2: Connect WebSocket — transcription topics will be added
-          // dynamically via POST as active calls are discovered by polling
+          // Step 2: Connect WebSocket
           connectWebSocket(channel.connectUri);
 
           // Step 3: Start polling the Conversations API for active voice calls
-          // (the queue push topic does not fire for voice — polling is required)
           isMonitoring = true;
           trackedConvIds.clear();
           updateTrackedConversations();
