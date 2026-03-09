@@ -490,6 +490,76 @@
         return all;
       }
 
+      // Poll for active voice calls in the selected queues.
+      // The queue push notification topic (v2.routing.queues.{id}.conversations.calls)
+      // does NOT fire for voice — it is only listed for chat/email/message etc.
+      // For voice we must poll GET /api/v2/conversations/calls and filter by queue.
+      async function pollActiveCallsInQueues() {
+        if (!isMonitoring || !notificationChannel) return;
+        try {
+          const res = await fetch(`https://api.${region}/api/v2/conversations/calls`, { headers: authHeaders() });
+          if (!res.ok) { log(`Poll failed: ${res.status}`, 'warn'); return; }
+          const data = await res.json();
+          const conversations = data.entities || [];
+
+          for (const conv of conversations) {
+            const convId = conv.id;
+            if (!convId || trackedConvIds.has(convId)) continue;
+
+            // Find which queue this conversation is in
+            let matchedQueueId = null;
+            if (conv.participants && Array.isArray(conv.participants)) {
+              for (const p of conv.participants) {
+                const qId = p.queue?.id || p.queueId;
+                if (qId && selectedQueuesCache.includes(qId)) {
+                  matchedQueueId = qId;
+                  break;
+                }
+              }
+            }
+
+            if (!matchedQueueId) continue; // not in a monitored queue
+
+            // Store mappings
+            convQueueMap[convId] = matchedQueueId;
+            const agent    = conv.participants?.find(p => p.purpose === 'agent');
+            const customer = conv.participants?.find(p => p.purpose === 'customer' || p.purpose === 'external');
+            convParticipantMap[convId] = {
+              agentId:   agent?.userId || agent?.id || 'unknown',
+              agentName: agent?.name   || 'Unknown Agent',
+              customer:  customer?.address || customer?.name || 'Unknown Customer'
+            };
+
+            trackedConvIds.add(convId);
+            updateTrackedConversations();
+            log(`Poll found active call: ${convId} in queue ${getQueueName(matchedQueueId)} — subscribing`, 'success');
+
+            try {
+              await postSubscriptions(notificationChannel.id, [`v2.conversations.${convId}.transcription`]);
+              log(`✓ Subscribed to transcription for ${convId}`, 'success');
+            } catch(e) {
+              log(`✗ Transcription subscribe failed: ${e.message}`, 'error');
+            }
+          }
+        } catch(e) {
+          log(`Poll error: ${e.message}`, 'warn');
+        }
+      }
+
+      let pollInterval = null;
+
+      function startPolling() {
+        stopPolling();
+        // Run immediately, then every 5 seconds
+        pollActiveCallsInQueues();
+        pollInterval = setInterval(pollActiveCallsInQueues, 5000);
+        log('Started polling for active calls every 5s', 'info');
+      }
+
+      function stopPolling() {
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      }
+
       async function createNotificationChannel() {
         const res = await fetch(`https://api.${region}/api/v2/notifications/channels`, { method: 'POST', headers: authHeaders() });
         if (!res.ok) throw new Error('Failed to create notification channel');
@@ -556,73 +626,17 @@
             // Heartbeat
             if (topic === 'channel.metadata') { log('Heartbeat ♥', 'info'); return; }
 
-            // ── Stage 1 — call arrived in a monitored queue ──────────────────
-            // Topic: v2.routing.queues.{queueId}.conversations.calls
-            // The queueId is embedded in the topic itself, which is reliable.
-            // The eventBody.id is the conversationId (it can also appear as body.id
-            // or within body.participants[].calls[].id in some SDK versions — we
-            // try all known locations defensively).
-            if (topic.startsWith('v2.routing.queues.') && topic.endsWith('.conversations.calls')) {
-              // Extract queueId from topic: v2.routing.queues.{queueId}.conversations.calls
-              const topicParts = topic.split('.');
-              // parts: ['v2','routing','queues','{queueId}','conversations','calls']
-              const queueId = topicParts[3];
-
-              // conversationId: Genesys puts it at eventBody.id
-              const conversationId = body.id || body.conversationId;
-
-              log(`Queue event — queueId: ${queueId}, conversationId: ${conversationId}, body keys: [${Object.keys(body).join(', ')}]`, 'info');
-
-              if (!conversationId) {
-                log(`⚠ No conversationId found. body.id=${body.id} body.conversationId=${body.conversationId}. Check console for full body.`, 'warn');
-                console.warn('[Queue body - missing conversationId]', JSON.stringify(body, null, 2));
-                return;
-              }
-
-              // Store conv→queue mapping for later display
-              convQueueMap[conversationId] = queueId;
-
-              // Extract participant info while we have it
-              if (body.participants && Array.isArray(body.participants)) {
-                const agent    = body.participants.find(p => p.purpose === 'agent');
-                const customer = body.participants.find(p => p.purpose === 'customer' || p.purpose === 'external');
-                convParticipantMap[conversationId] = {
-                  agentId:   agent?.userId   || agent?.id   || 'unknown',
-                  agentName: agent?.name     || 'Unknown Agent',
-                  customer:  customer?.address || customer?.name || 'Unknown Customer'
-                };
-              }
-
-              if (!trackedConvIds.has(conversationId)) {
-                trackedConvIds.add(conversationId);
-                updateTrackedConversations();
-                log(`New conversation: ${conversationId} in queue ${queueId} — subscribing to transcription`, 'success');
-
-                // Stage 2: subscribe to this conversation's transcription topic
-                // Topic: v2.conversations.{conversationId}.transcription
-                try {
-                  await postSubscriptions(notificationChannel.id, [
-                    `v2.conversations.${conversationId}.transcription`
-                  ]);
-                  log(`✓ Subscribed to transcription for ${conversationId}`, 'success');
-                } catch (e) {
-                  log(`✗ Failed to subscribe to transcription: ${e.message}`, 'error');
-                }
-              }
-              return;
-            }
-
-            // ── Stage 2 — live transcription notification ────────────────────
+            // ── Transcription notification ────────────────────────────────────
             // Topic: v2.conversations.{conversationId}.transcription
+            // Conversations are discovered by polling; we subscribe here dynamically.
             if (topic.startsWith('v2.conversations.') && topic.endsWith('.transcription')) {
-              log(`Transcription event on: ${topic}`, 'success');
-              // Log full body to console for debugging payload shape
+              log(`Transcription event: ${topic}`, 'success');
               console.log('Transcription body:', JSON.stringify(body, null, 2));
               processTranscriptionNotification(body, topic);
               return;
             }
 
-            // Any other topic — log it so nothing is invisible
+            // Any other topic
             log(`Unhandled topic: ${topic}`, 'warn');
 
           } catch (e) {
@@ -819,21 +833,16 @@
           $('channelId').innerText = channel.id;
           log(`Channel created: ${channel.id}`, 'success');
 
-          // Step 2: Subscribe to queue conversation topics (Stage 1 topics)
-          // FIX: correct topic format v2.routing.queues.{queueId}.conversations.calls
-          // FIX: no `state` field; plain { id } objects only
-          const queueTopics = selectedQueues.map(qId => `v2.routing.queues.${qId}.conversations.calls`);
-          log(`Subscribing to ${queueTopics.length} queue topic(s)…`, 'info');
-          await putSubscriptions(channel.id, queueTopics);
-          log('Queue topics subscribed', 'success');
-
-          // Step 3: Connect WebSocket — per-conversation transcription topics
-          // will be added dynamically via POST as calls arrive (Stage 2)
+          // Step 2: Connect WebSocket — transcription topics will be added
+          // dynamically via POST as active calls are discovered by polling
           connectWebSocket(channel.connectUri);
 
+          // Step 3: Start polling the Conversations API for active voice calls
+          // (the queue push topic does not fire for voice — polling is required)
           isMonitoring = true;
           trackedConvIds.clear();
           updateTrackedConversations();
+          startPolling();
 
           $('subscribeBtn').disabled  = true;
           $('unsubscribeBtn').disabled = false;
@@ -841,7 +850,7 @@
           enableRefreshButton(true);
           $('connectionStatus').innerText = 'Connecting…';
 
-          showMessage('✅ Monitoring started. Waiting for calls in selected queues…', 'success');
+          showMessage('✅ Monitoring started — polling for active calls every 5s…', 'success');
         } catch (err) {
           log(`Subscribe failed: ${err.message}`, 'error');
           showMessage('Failed to subscribe: ' + err.message, 'error');
@@ -855,6 +864,7 @@
 
       function handleUnsubscribe() {
         isMonitoring = false;
+        stopPolling();
         if (webSocket) { webSocket.close(); webSocket = null; }
         notificationChannel = null;
         trackedConvIds.clear();
@@ -899,6 +909,7 @@
           }
 
           connectWebSocket(notificationChannel.connectUri);
+          startPolling();
           showMessage('Channel refreshed successfully', 'success');
         } catch (err) {
           log(`Refresh failed: ${err.message}`, 'error');
