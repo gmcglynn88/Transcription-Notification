@@ -57,13 +57,13 @@
       width: 100%;
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      overflow-x: auto; /* Allow horizontal scroll only when needed */
+      overflow-x: auto;
       margin-top: 10px;
     }
     .events-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1200px; /* Ensure table has minimum width */
+      min-width: 1200px;
     }
     .events-table th, .events-table td {
       padding: 12px 15px;
@@ -79,7 +79,7 @@
       position: sticky;
       top: 0;
     }
-    /* Improved column widths - more space for important columns */
+    /* Improved column widths */
     .events-table .col-time    { width: 80px; white-space: nowrap; }
     .events-table .col-risk    { width: 100px; }
     .events-table .col-conv    { width: 120px; }
@@ -207,12 +207,21 @@
 
     /* Conversation link */
     .conv-link {
-      color: var(--primary-color);
-      font-family: monospace;
-      font-size: 13px;
+      display: inline-block;
+      background: var(--primary-color);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .conv-link:hover { 
+      background: var(--secondary-color);
       text-decoration: none;
     }
-    .conv-link:hover { text-decoration: underline; }
 
     /* Phrase list */
     .phrase-item {
@@ -475,18 +484,20 @@
 
       // Default phrases — each has a phrase string and a risk level: low | medium | high
       let riskPhrases = [
-        { phrase: 'complain',  level: 'medium' },
-        { phrase: 'vulnerable', level: 'high'   },
+        { phrase: 'complaint',  level: 'medium' },
+        { phrase: 'lawsuit',    level: 'high'   },
         { phrase: 'cancel',     level: 'low'    },
         { phrase: 'refund',     level: 'low'    },
-        { phrase: 'ridiculous', level: 'high'   },
-        { phrase: 'manager', level: 'medium' },
+        { phrase: 'chargeback', level: 'high'   },
+        { phrase: 'supervisor', level: 'medium' },
         { phrase: 'escalate',   level: 'medium' },
         { phrase: 'terminate',  level: 'high'   },
         { phrase: 'breach',     level: 'high'   },
         { phrase: 'fraud',      level: 'high'   },
-        { phrase: 'Suicide',    level: 'high'   },        
       ];
+
+      // Cache for user details to avoid repeated API calls
+      let userCache = {};
 
       // ── Phrase Manager ────────────────────────────────────────────────────────
       const levelConfig = {
@@ -568,7 +579,6 @@
       }
 
       function updateWebsocketState(state) {
-        // Map state to dot indicator
         const dot = $('statusDot');
         const lbl = $('statusLabel');
         if (!dot) return;
@@ -700,21 +710,33 @@
         return all;
       }
 
-      // Fetch user details by ID
+      // Fetch user details by ID with caching
       async function fetchUserDetails(userId) {
         if (!userId || userId === 'unknown') return 'Unknown Agent';
+        
+        // Check cache first
+        if (userCache[userId]) {
+          return userCache[userId];
+        }
+        
         try {
           const res = await fetch(`https://api.${region}/api/v2/users/${userId}`, { headers: authHeaders() });
-          if (!res.ok) return 'Unknown Agent';
+          if (!res.ok) {
+            userCache[userId] = 'Unknown Agent';
+            return 'Unknown Agent';
+          }
           const user = await res.json();
-          return user.name || 'Unknown Agent';
+          const userName = user.name || 'Unknown Agent';
+          userCache[userId] = userName;
+          return userName;
         } catch (e) {
           log(`Failed to fetch user ${userId}: ${e.message}`, 'warn');
+          userCache[userId] = 'Unknown Agent';
           return 'Unknown Agent';
         }
       }
 
-      // Poll for active voice calls in the selected queues.
+      // Poll for active voice calls in the selected queues
       async function pollActiveCallsInQueues() {
         if (!isMonitoring || !notificationChannel) return;
         try {
@@ -727,7 +749,6 @@
             const convId = conv.id;
             if (!convId || trackedConvIds.has(convId)) continue;
 
-            // Find which queue this conversation is in
             let matchedQueueId = null;
             let agentId = null;
             let agentName = 'Unknown Agent';
@@ -735,25 +756,32 @@
 
             if (conv.participants && Array.isArray(conv.participants)) {
               for (const p of conv.participants) {
-                const qId = p.queue?.id || p.queueId;
+                // Try multiple places to find queue ID
+                const qId = p.queueId || p.queue?.id || (p.queue && typeof p.queue === 'object' ? p.queue.id : null);
                 if (qId && selectedQueuesCache.includes(qId)) {
                   matchedQueueId = qId;
                 }
+                
+                // Find agent information - try multiple fields
                 if (p.purpose === 'agent') {
-                  agentId = p.userId || p.id;
-                  agentName = p.name || 'Unknown Agent';
-                  // If we have a userId but no name, try to fetch it
-                  if (agentId && (!agentName || agentName === 'Unknown Agent')) {
-                    // Don't await - fetch in background
+                  agentId = p.userId || p.id || (p.user ? p.user.id : null);
+                  agentName = p.name || p.user?.name || 'Unknown Agent';
+                  
+                  // If we have a userId but no name, try to fetch it in background
+                  if (agentId && (!agentName || agentName === 'Unknown Agent' || agentName === null)) {
                     fetchUserDetails(agentId).then(name => {
                       if (convParticipantMap[convId]) {
                         convParticipantMap[convId].agentName = name;
+                        // Re-render notifications to update the display
+                        renderNotifications();
                       }
                     });
                   }
                 }
+                
+                // Find customer information
                 if (p.purpose === 'customer' || p.purpose === 'external') {
-                  customerName = p.name || p.address || p.ani || 'Unknown Customer';
+                  customerName = p.name || p.externalContact?.name || p.address || p.ani || 'Unknown Customer';
                 }
               }
             }
@@ -999,17 +1027,17 @@
         }
         tbody.innerHTML = notifications.map(n => {
           const time      = new Date(n.timestamp).toLocaleTimeString('en-GB');
-          const shortId   = n.conversationId.substring(0, 8) + '…';
           const lc        = levelConfig[n.riskLevel] || levelConfig.medium;
           const genesysUrl = `https://apps.${region}/directory/#/analytics/interactions/${n.conversationId}/admin`;
           const highlighted = n.transcript.replace(
             new RegExp(`(${n.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
+          
           return `<tr class="risk-row-${n.riskLevel}">
             <td class="col-time">${time}</td>
             <td class="col-risk"><span class="risk-badge risk-badge-${n.riskLevel}">${lc.icon} ${lc.label}</span></td>
-            <td class="col-conv"><a href="${genesysUrl}" target="_blank" title="Open interaction ${n.conversationId}" class="conv-link">${shortId} ↗</a></td>
+            <td class="col-conv"><a href="${genesysUrl}" target="_blank" title="Open interaction ${n.conversationId}" class="conv-link">Go to Interaction ↗</a></td>
             <td class="col-queue" title="${n.queueName}">${n.queueName}</td>
             <td class="col-agent" title="${n.agentName}">${n.agentName}</td>
             <td class="col-cust" title="${n.customer || '—'}">${n.customer || '—'}</td>
