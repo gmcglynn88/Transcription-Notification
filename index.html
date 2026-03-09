@@ -30,7 +30,7 @@
     tr:hover{background-color:rgba(99,171,143,.05)}
     .table-container{overflow-x:auto;border:1px solid var(--border-color);border-radius:6px;padding:1px;margin-top:10px}
 
-    /* Fixed column styling for analytics table */
+    /* Fixed column styling */
     .frozen-table-container { 
       position: relative; 
       overflow: auto; 
@@ -70,7 +70,6 @@
       z-index: 10; 
     }
     
-    /* First column (Agent) - fixed when scrolling */
     .frozen-table th:first-child, 
     .frozen-table td:first-child { 
       position: sticky; 
@@ -88,7 +87,7 @@
       background: var(--primary-color); 
     }
 
-    /* Tab styling */
+    /* Main tab styling */
     .main-tab-container {
       display: flex;
       gap: 12px;
@@ -131,7 +130,6 @@
     .badge-ok{color:#14532d;background:#dcfce7;border-color:#bbf7d0}
     .badge-info{background:var(--pill);color:var(--text-color);border-color:var(--border-color)}
 
-    /* Risk severity styling */
     .risk-high { border-left: 4px solid var(--bad); background-color: #fef2f2; }
     .risk-medium { border-left: 4px solid var(--warn); background-color: #fffbeb; }
     .risk-low { border-left: 4px solid var(--ok); background-color: #f0fdf4; }
@@ -161,7 +159,7 @@
     .kpi .label{color:var(--text-light);font-size:12px}
     .kpi .value{font-size:20px;font-weight:700;margin-top:4px}
 
-    /* === CHECKBOX DROPDOWN (exact styling from queue management app) === */
+    /* Checkbox dropdown from queue management app */
     .checkbox-dropdown{position:relative;min-width:220px;width:100%}
     .cd-trigger{
       display:flex;align-items:center;justify-content:space-between;
@@ -235,13 +233,12 @@
     .loading-spinner{display:inline-block;width:20px;height:20px;border:2px solid #f3f3f3;border-top:2px solid var(--primary-color);border-radius:50%;animation:spin 1s linear infinite;margin-right:8px}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div id="logo-container">
     <svg id="logo" viewBox="0 0 300 60" style="background:#f0f2f5; border-radius:30px; padding:8px;">
       <text x="20" y="40" font-family="Aptos, Segoe UI" font-size="26" fill="#2C3E50">Genesys Cloud</text>
-      <text x="190" y="40" font-family="Aptos" font-size="18" fill="#63AB8F" font-weight="bold">Transcription Risk</text>
+      <text x="190" y="40" font-family="Aptos" font-size="18" fill="#63AB8F" font-weight="bold">Transcription Notifications</text>
     </svg>
   </div>
 
@@ -253,65 +250,66 @@
     <div id="messageContainer"></div>
 
     <div class="main-tab-container">
-      <button class="main-tab-button active" data-tab="tab-dashboard">Risk Dashboard</button>
-      <button class="main-tab-button" data-tab="tab-guide">How to Use</button>
+      <button class="main-tab-button active" data-tab="tab-dashboard">Transcription Monitor</button>
+      <button class="main-tab-button" data-tab="tab-guide">API Blueprint Reference</button>
     </div>
 
     <div id="tab-dashboard" class="main-tab-content active">
       <div class="card">
-        <h2 class="section-title">🎙️ Real-time Transcription Monitor</h2>
+        <h2 class="section-title">🎙️ Transcription Notification Monitor</h2>
+        <p class="muted">Based on <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Genesys Cloud Transcription Notifications API</a></p>
         
-        <!-- Queue selection dropdown (styled exactly like queue management app) -->
+        <!-- Queue selection dropdown (styled like queue management app) -->
         <div style="max-width:500px; margin-bottom:20px;">
-          <label>Select Queues to Monitor</label>
+          <label>Filter by Queues (conversation queues)</label>
           <div id="queueSelector" class="checkbox-dropdown"></div>
-          <div class="muted" style="margin-top:4px;">Choose one or more queues to monitor for risk phrases</div>
+          <div class="muted" style="margin-top:4px;">Select queues to monitor for transcription notifications</div>
         </div>
 
-        <!-- Selected queues display (like bulk display) -->
+        <!-- Selected queues display -->
         <div class="selected-queues-display" id="selectedQueuesDisplay">
           <div class="muted">No queues selected</div>
         </div>
 
         <div class="controls">
           <div style="flex:2;">
-            <label for="riskKeywords">Risk phrases (comma separated)</label>
-            <input id="riskKeywords" type="text" value="complaint, lawsuit, cancel, not happy, refund, chargeback, supervisor, escalate, terminate, breach, policy violation, fraud, inappropriate" placeholder="e.g. complaint, cancel, sue">
+            <label for="riskKeywords">Risk phrases to detect</label>
+            <input id="riskKeywords" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud" placeholder="e.g. complaint, cancel, refund">
           </div>
           <div style="display: flex; gap: 8px; align-items: end;">
-            <button id="startMonitorBtn" class="full-width-btn" style="margin-top:0;">
+            <button id="subscribeBtn" class="full-width-btn" style="margin-top:0;">
               <span class="loading-spinner" style="display:none;"></span>
-              <span class="btn-text">▶ Start Monitoring</span>
+              <span class="btn-text">🔔 Subscribe to Notifications</span>
             </button>
-            <button id="stopMonitorBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>⏹ Stop</button>
+            <button id="unsubscribeBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>🔕 Unsubscribe</button>
           </div>
         </div>
         
         <div style="margin-top: 8px;">
-          <span class="badge badge-info">Status: <span id="monitorStatus">Disconnected</span></span>
-          <span class="badge badge-info">Queues: <span id="queueCount">0</span> selected</span>
+          <span class="badge badge-info">Status: <span id="connectionStatus">Not subscribed</span></span>
+          <span class="badge badge-info">Notification channel: <span id="channelId">—</span></span>
         </div>
       </div>
 
-      <!-- Risk statistics cards -->
+      <!-- Risk statistics -->
       <div class="card">
-        <h2 class="section-title">⚠️ Recent Risk Events</h2>
+        <h2 class="section-title">⚠️ Risk Events from Transcription Notifications</h2>
         <div class="kpis" style="grid-template-columns: repeat(4,1fr); margin-bottom: 20px;" id="riskStats">
           <div class="kpi"><span class="label">High severity</span><span class="value" id="statHigh">0</span></div>
           <div class="kpi"><span class="label">Medium</span><span class="value" id="statMed">0</span></div>
           <div class="kpi"><span class="label">Low</span><span class="value" id="statLow">0</span></div>
-          <div class="kpi"><span class="label">Agents at risk</span><span class="value" id="statAgents">0</span></div>
+          <div class="kpi"><span class="label">Notifications</span><span class="value" id="statTotal">0</span></div>
         </div>
 
         <div class="frozen-table-container">
-          <table class="frozen-table" id="riskTable">
+          <table class="frozen-table" id="notificationTable">
             <thead>
               <tr>
-                <th>Time</th><th>Agent</th><th>Queue</th><th>Customer</th><th>Risk Phrase</th><th>Severity</th><th>Transcript Snippet</th>
+                <th>Timestamp</th><th>Conversation ID</th><th>Queue</th><th>Agent</th><th>Customer</th><th>Phrase</th><th>Severity</th><th>Transcript</th>
               </tr>
             </thead>
-            <tbody id="riskTableBody">
-              <tr><td colspan="7" class="muted" style="text-align:center;">No events yet. Select queues and start monitoring.</td></tr>
+            <tbody id="notificationTableBody">
+              <tr><td colspan="8" class="muted" style="text-align:center;">No notifications yet. Select queues and subscribe.</td></tr>
             </tbody>
           </table>
         </div>
@@ -324,18 +322,19 @@
 
     <div id="tab-guide" class="main-tab-content">
       <div class="card">
-        <h2 class="section-title">How to Use – Queue-Based Risk Monitor</h2>
-        <div class="guide-step" style="margin:20px 0; padding-left:20px; border-left:3px solid var(--primary-color);">
-          <h3>🔐 Authentication</h3>
-          <p>OAuth implicit grant with Genesys Cloud (Ireland region). You'll be redirected to login.mypurecloud.ie.</p>
-        </div>
-        <div class="guide-step" style="margin:20px 0; padding-left:20px; border-left:3px solid var(--primary-color);">
-          <h3>📋 Queue Selection</h3>
-          <p>Select one or more queues using the styled dropdown. The dropdown fetches real queues from the Genesys API using <code>/api/v2/routing/queues</code>.</p>
-        </div>
-        <div class="guide-step" style="margin:20px 0; padding-left:20px; border-left:3px solid var(--primary-color);">
-          <h3>⚠️ Risk Detection</h3>
-          <p>The app polls the transcription notifications endpoint and scans for configured risk phrases. High severity: lawsuit, breach, fraud. Medium: complaint, cancel, supervisor. Low: other matches.</p>
+        <h2 class="section-title">📘 Genesys Cloud Transcription Notifications API</h2>
+        <div style="background:var(--light-bg); padding:20px; border-radius:8px;">
+          <h3>Blueprint Implementation</h3>
+          <p>This app implements the <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Transcription Notifications API</a> following these steps:</p>
+          <ol>
+            <li><strong>POST /api/v2/notifications/channels</strong> - Create a notification channel</li>
+            <li><strong>GET /api/v2/notifications/channels</strong> - Verify channel</li>
+            <li><strong>PUT /api/v2/notifications/channels/{channelId}/subscriptions</strong> - Subscribe to <code>v2.speechandtextanalytics.transcription-notifications</code> topic</li>
+            <li><strong>WebSocket connection</strong> - Connect to the channel WebSocket to receive real-time notifications</li>
+            <li><strong>Notification format:</strong> Each notification contains conversation details, transcript, and risk detection</li>
+          </ol>
+          <p><strong>Region:</strong> mypurecloud.ie (Ireland)</p>
+          <p><strong>OAuth scopes:</strong> speech-and-text-analytics, notifications</p>
         </div>
       </div>
     </div>
@@ -343,21 +342,21 @@
 
   <script>
     (function() {
-      // OAuth configuration
+      // Configuration
       const clientId = 'fe305808-b368-4547-8af9-325d28d552bb';
       const redirectUri = 'https://gmcglynn88.github.io/Transcription-Notification/';
-      const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      const region = 'mypurecloud.ie';
+      const oauthUrl = `https://login.${region}/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
+      // State
       let token = null;
       let availableQueues = [];
       let queueDropdown = null;
-      let monitorInterval = null;
-      let isMonitoring = false;
+      let notificationChannel = null;
+      let webSocket = null;
+      let notifications = [];
       
-      // Risk events storage
-      let riskEvents = [];
-      
-      // Risk keywords with severity mapping
+      // Risk keywords with severity
       const riskKeywords = {
         high: ['lawsuit', 'breach', 'fraud', 'chargeback', 'policy violation', 'inappropriate'],
         medium: ['complaint', 'cancel', 'supervisor', 'escalate', 'terminate', 'not happy'],
@@ -375,10 +374,13 @@
       }
 
       function authHeaders() {
-        return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+        return { 
+          Authorization: `Bearer ${token}`, 
+          'Content-Type': 'application/json'
+        };
       }
 
-      // Create checkbox dropdown (exact replica from queue management app)
+      // Create checkbox dropdown (from queue management app)
       function createQueueDropdown(containerId, { placeholder, searchPlaceholder }) {
         const root = $(containerId);
         if (!root) return null;
@@ -438,7 +440,6 @@
               updateSummary();
               updateSelectAllState();
               updateSelectedDisplay();
-              updateQueueCount();
             });
             list.appendChild(row);
           });
@@ -468,10 +469,6 @@
           });
           displayDiv.innerHTML = names.map(n => `<div class="selected-queue-item">${n}</div>`).join('');
         }
-        
-        function updateQueueCount() {
-          $('queueCount').innerText = selected.size;
-        }
 
         trigger.addEventListener('click', () => { panel.classList.toggle('open'); search.focus(); });
         document.addEventListener('click', (e) => { if (!root.contains(e.target)) panel.classList.remove('open'); });
@@ -483,7 +480,6 @@
           updateSummary();
           updateSelectAllState();
           updateSelectedDisplay();
-          updateQueueCount();
         });
 
         selectAll.addEventListener('change', () => {
@@ -493,7 +489,6 @@
           updateSummary();
           updateSelectAllState();
           updateSelectedDisplay();
-          updateQueueCount();
         });
 
         function setOptions(arr) {
@@ -503,7 +498,6 @@
           updateSummary();
           updateSelectAllState();
           updateSelectedDisplay();
-          updateQueueCount();
         }
 
         function getSelectedValues() { return [...selected]; }
@@ -512,7 +506,7 @@
         return { setOptions, getSelectedValues };
       }
 
-      // API calls
+      // API Calls following the blueprint
       async function fetchAllQueues() {
         let all = [];
         let page = 1;
@@ -520,7 +514,7 @@
         let total = 0;
         do {
           const res = await fetch(
-            `https://api.mypurecloud.ie/api/v2/routing/queues?pageNumber=${page}&pageSize=${pageSize}`,
+            `https://api.${region}/api/v2/routing/queues?pageNumber=${page}&pageSize=${pageSize}`,
             { headers: authHeaders() }
           );
           if (!res.ok) throw new Error('Failed to fetch queues');
@@ -532,194 +526,263 @@
         return all;
       }
 
-      async function fetchQueueMembers(queueId) {
-        let members = [];
-        let page = 1;
-        const pageSize = 100;
-        let total = 0;
-        do {
-          const res = await fetch(
-            `https://api.mypurecloud.ie/api/v2/routing/queues/${queueId}/members?pageNumber=${page}&pageSize=${pageSize}`,
-            { headers: authHeaders() }
-          );
-          if (!res.ok) throw new Error(`Failed members for queue ${queueId}`);
-          const data = await res.json();
-          members = members.concat(data.entities || []);
-          total = data.total || 0;
-          page++;
-        } while (members.length < total);
-        return members;
+      // Step 1: Create notification channel
+      async function createNotificationChannel() {
+        const res = await fetch(
+          `https://api.${region}/api/v2/notifications/channels`,
+          {
+            method: 'POST',
+            headers: authHeaders()
+          }
+        );
+        if (!res.ok) throw new Error('Failed to create notification channel');
+        return await res.json();
       }
 
-      // Risk detection
+      // Step 2: Get channel info
+      async function getChannel(channelId) {
+        const res = await fetch(
+          `https://api.${region}/api/v2/notifications/channels/${channelId}`,
+          { headers: authHeaders() }
+        );
+        if (!res.ok) throw new Error('Failed to get channel');
+        return await res.json();
+      }
+
+      // Step 3: Subscribe to transcription notifications topic
+      async function subscribeToTranscriptionNotifications(channelId) {
+        const body = [
+          {
+            id: `v2.speechandtextanalytics.transcription-notifications`,
+            state: 'Enabled'
+          }
+        ];
+        
+        const res = await fetch(
+          `https://api.${region}/api/v2/notifications/channels/${channelId}/subscriptions`,
+          {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify(body)
+          }
+        );
+        if (!res.ok) throw new Error('Failed to subscribe to transcription notifications');
+        return await res.json();
+      }
+
+      // Step 4: Connect WebSocket
+      function connectWebSocket(connectUri) {
+        if (webSocket) {
+          webSocket.close();
+        }
+
+        webSocket = new WebSocket(connectUri);
+        
+        webSocket.onopen = () => {
+          console.log('WebSocket connected');
+          $('connectionStatus').innerText = 'Connected';
+        };
+        
+        webSocket.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            // Handle notification - format from blueprint
+            if (message.topicName === 'v2.speechandtextanalytics.transcription-notifications' && message.eventBody) {
+              processTranscriptionNotification(message.eventBody);
+            }
+          } catch (e) {
+            console.error('Error processing WebSocket message', e);
+          }
+        };
+        
+        webSocket.onerror = (error) => {
+          console.error('WebSocket error', error);
+          $('connectionStatus').innerText = 'Error';
+          showMessage('WebSocket connection error', 'error');
+        };
+        
+        webSocket.onclose = () => {
+          console.log('WebSocket closed');
+          $('connectionStatus').innerText = 'Disconnected';
+        };
+      }
+
+      // Process incoming transcription notification
+      function processTranscriptionNotification(notification) {
+        // Filter by selected queues if any
+        const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
+        if (selectedQueues.length > 0) {
+          // Check if conversation queue is in selected queues
+          const queueId = notification.conversation?.queueId;
+          if (!queueId || !selectedQueues.includes(queueId)) {
+            return; // Skip notifications from non-selected queues
+          }
+        }
+
+        // Extract transcript text
+        const transcript = notification.transcript || '';
+        
+        // Detect risk
+        const risk = detectRisk(transcript);
+        
+        if (risk) {
+          const notificationEvent = {
+            id: notification.id || Date.now() + '-' + Math.random(),
+            timestamp: notification.eventTime || new Date().toISOString(),
+            conversationId: notification.conversation?.id || 'unknown',
+            queueId: notification.conversation?.queueId,
+            queueName: getQueueName(notification.conversation?.queueId),
+            agentId: notification.agent?.id,
+            agentName: notification.agent?.name || 'Unknown Agent',
+            customer: notification.customer?.phone || notification.customer?.email || 'Unknown Customer',
+            transcript: transcript,
+            phrase: risk.word,
+            severity: risk.severity
+          };
+          
+          notifications.unshift(notificationEvent);
+          if (notifications.length > 100) notifications.pop();
+          renderNotifications();
+          updateStats();
+        }
+      }
+
+      function getQueueName(queueId) {
+        if (!queueId) return 'Unknown';
+        const queue = availableQueues.find(q => q.id === queueId);
+        return queue ? queue.name : queueId;
+      }
+
       function detectRisk(text) {
         text = text.toLowerCase();
         
-        // Check high severity first
         for (let word of riskKeywords.high) {
           if (text.includes(word)) return { severity: 'high', word };
         }
         
-        // Check medium severity
         for (let word of riskKeywords.medium) {
           if (text.includes(word)) return { severity: 'medium', word };
         }
         
-        // Check low severity
         for (let word of riskKeywords.low) {
+          if (text.includes(word)) return { severity: 'low', word };
+        }
+        
+        // Check custom keywords from input
+        const customWords = $('riskKeywords').value.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+        for (let word of customWords) {
           if (text.includes(word)) return { severity: 'low', word };
         }
         
         return null;
       }
 
-      // Generate mock transcription notification (simulates API)
-      function generateMockNotification(selectedQueues) {
-        if (!selectedQueues || selectedQueues.length === 0) return null;
-        
-        const agents = ['Alice Johnson', 'Bob Smith', 'Carla Diaz', 'David Chen', 'Elena Garcia'];
-        const customers = ['+353 87 123 4567', 'customer@example.ie', 'John D.', 'Mary S.', 'Peter M.'];
-        const snippets = [
-          "I want to cancel my service immediately, this is not working",
-          "I'm not happy with the charges, I'd like to speak to a supervisor",
-          "If you don't refund I will have to file a chargeback",
-          "This is a complaint about your policy violation",
-          "We need to escalate this to legal, potential breach",
-          "Thank you for your help, everything is fine",
-          "I demand a refund right now, or I'll dispute",
-          "Your agent was very rude, I want to terminate",
-          "Fraud alert on my account, this is unacceptable",
-          "The service has been delayed multiple times"
-        ];
-        
-        // Pick random queue from selected ones
-        const randomQueueId = selectedQueues[Math.floor(Math.random() * selectedQueues.length)];
-        const queue = availableQueues.find(q => q.id === randomQueueId);
-        
-        const text = snippets[Math.floor(Math.random() * snippets.length)];
-        const risk = detectRisk(text);
-        
-        if (!risk) return null; // No risk detected
-        
-        return {
-          id: Date.now() + '-' + Math.random(),
-          timestamp: new Date().toISOString(),
-          agentName: agents[Math.floor(Math.random() * agents.length)],
-          queueName: queue ? queue.name : 'Unknown Queue',
-          queueId: randomQueueId,
-          customer: customers[Math.floor(Math.random() * customers.length)],
-          snippet: text,
-          phrase: risk.word,
-          severity: risk.severity
-        };
-      }
-
-      // Add risk event to table
-      function addRiskEvent(event) {
-        riskEvents.unshift(event);
-        if (riskEvents.length > 50) riskEvents.pop();
-        renderRiskTable();
-        updateRiskStats();
-      }
-
-      function renderRiskTable() {
-        const tbody = $('riskTableBody');
-        if (!riskEvents.length) {
-          tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;">No events yet.</td></tr>';
+      function renderNotifications() {
+        const tbody = $('notificationTableBody');
+        if (!notifications.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;">No notifications yet.</td></tr>';
           return;
         }
         
-        const rows = riskEvents.map(e => {
-          const time = new Date(e.timestamp).toLocaleTimeString('en-GB');
-          let severityClass = e.severity === 'high' ? 'badge-fatal' : (e.severity === 'medium' ? 'badge-critical' : 'badge-ok');
-          let rowClass = e.severity === 'high' ? 'risk-high' : (e.severity === 'medium' ? 'risk-medium' : 'risk-low');
+        const rows = notifications.map(n => {
+          let severityClass = n.severity === 'high' ? 'badge-fatal' : (n.severity === 'medium' ? 'badge-critical' : 'badge-ok');
+          let rowClass = n.severity === 'high' ? 'risk-high' : (n.severity === 'medium' ? 'risk-medium' : 'risk-low');
           
-          // Highlight risk words in transcript
-          const highlightedSnippet = e.snippet.replace(
-            new RegExp(`(${e.phrase})`, 'gi'),
+          const time = new Date(n.timestamp).toLocaleTimeString('en-GB');
+          const shortConvId = n.conversationId.substring(0, 8) + '...';
+          
+          // Highlight risk words
+          const highlighted = n.transcript.replace(
+            new RegExp(`(${n.phrase})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
           
           return `<tr class="${rowClass}">
             <td>${time}</td>
-            <td>${e.agentName}</td>
-            <td>${e.queueName}</td>
-            <td>${e.customer}</td>
-            <td><span class="pill">${e.phrase}</span></td>
-            <td><span class="badge ${severityClass}">${e.severity}</span></td>
-            <td><div class="transcript-preview">${highlightedSnippet}</div></td>
+            <td title="${n.conversationId}">${shortConvId}</td>
+            <td>${n.queueName}</td>
+            <td>${n.agentName}</td>
+            <td>${n.customer}</td>
+            <td><span class="pill">${n.phrase}</span></td>
+            <td><span class="badge ${severityClass}">${n.severity}</span></td>
+            <td><div class="transcript-preview">${highlighted}</div></td>
           </tr>`;
         }).join('');
         
         tbody.innerHTML = rows;
       }
 
-      function updateRiskStats() {
-        const high = riskEvents.filter(e => e.severity === 'high').length;
-        const med = riskEvents.filter(e => e.severity === 'medium').length;
-        const low = riskEvents.filter(e => e.severity === 'low').length;
-        const uniqueAgents = new Set(riskEvents.map(e => e.agentName)).size;
+      function updateStats() {
+        const high = notifications.filter(n => n.severity === 'high').length;
+        const med = notifications.filter(n => n.severity === 'medium').length;
+        const low = notifications.filter(n => n.severity === 'low').length;
         
         $('statHigh').innerText = high;
         $('statMed').innerText = med;
         $('statLow').innerText = low;
-        $('statAgents').innerText = uniqueAgents;
+        $('statTotal').innerText = notifications.length;
       }
 
-      // Monitoring controls
-      function startMonitoring() {
-        if (!queueDropdown) return;
-        
-        const selectedQueues = queueDropdown.getSelectedValues();
+      // Subscribe button handler - implements full blueprint flow
+      async function handleSubscribe() {
+        const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
         if (selectedQueues.length === 0) {
           showMessage('Please select at least one queue to monitor', 'error');
           return;
         }
+
+        const btn = $('subscribeBtn');
+        const spinner = btn.querySelector('.loading-spinner');
+        const btnText = btn.querySelector('.btn-text');
         
-        // Parse custom keywords
-        const customKeywords = $('riskKeywords').value.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
-        if (customKeywords.length) {
-          // Update risk keywords (simplified - just add to low severity for demo)
-          riskKeywords.low = customKeywords;
+        spinner.style.display = 'inline-block';
+        btnText.textContent = 'Creating channel...';
+        btn.disabled = true;
+
+        try {
+          // Step 1: Create channel
+          showMessage('Creating notification channel...', 'info');
+          const channel = await createNotificationChannel();
+          notificationChannel = channel;
+          $('channelId').innerText = channel.id;
+
+          // Step 2: Verify channel (optional, just get it)
+          await getChannel(channel.id);
+
+          // Step 3: Subscribe to transcription notifications topic
+          showMessage('Subscribing to transcription notifications...', 'info');
+          await subscribeToTranscriptionNotifications(channel.id);
+
+          // Step 4: Connect WebSocket
+          connectWebSocket(channel.connectUri);
+
+          // Update UI
+          $('subscribeBtn').disabled = true;
+          $('unsubscribeBtn').disabled = false;
+          $('connectionStatus').innerText = 'Connecting...';
+          
+          showMessage('Successfully subscribed to transcription notifications', 'success');
+        } catch (err) {
+          showMessage('Failed to subscribe: ' + err.message, 'error');
+          console.error(err);
+        } finally {
+          spinner.style.display = 'none';
+          btnText.textContent = '🔔 Subscribe to Notifications';
+          btn.disabled = false;
         }
-        
-        isMonitoring = true;
-        $('monitorStatus').innerText = 'Monitoring';
-        $('startMonitorBtn').disabled = true;
-        $('stopMonitorBtn').disabled = false;
-        
-        showMessage(`Monitoring started for ${selectedQueues.length} queue(s)`, 'success');
-        
-        // Start polling for notifications (simulated every 5 seconds)
-        monitorInterval = setInterval(() => {
-          if (!isMonitoring) return;
-          
-          const selected = queueDropdown.getSelectedValues();
-          if (selected.length === 0) {
-            stopMonitoring();
-            return;
-          }
-          
-          // Generate mock notification with 40% probability
-          if (Math.random() < 0.4) {
-            const event = generateMockNotification(selected);
-            if (event) {
-              addRiskEvent(event);
-            }
-          }
-        }, 5000);
       }
 
-      function stopMonitoring() {
-        isMonitoring = false;
-        if (monitorInterval) {
-          clearInterval(monitorInterval);
-          monitorInterval = null;
+      function handleUnsubscribe() {
+        if (webSocket) {
+          webSocket.close();
+          webSocket = null;
         }
-        $('monitorStatus').innerText = 'Disconnected';
-        $('startMonitorBtn').disabled = false;
-        $('stopMonitorBtn').disabled = true;
-        showMessage('Monitoring stopped', 'info');
+        notificationChannel = null;
+        $('channelId').innerText = '—';
+        $('connectionStatus').innerText = 'Not subscribed';
+        $('subscribeBtn').disabled = false;
+        $('unsubscribeBtn').disabled = true;
+        showMessage('Unsubscribed from notifications', 'success');
       }
 
       // OAuth handling
@@ -732,7 +795,7 @@
           token = sessionStorage.getItem('purecloud_token');
           const exp = sessionStorage.getItem('purecloud_token_exp');
           if (token && exp && Date.now() < parseInt(exp)) {
-            // Valid token
+            // Valid
           } else {
             window.location.href = oauthUrl;
             return;
@@ -755,9 +818,7 @@
 
       async function initializeApp() {
         try {
-          showMessage('Loading queues from API...', 'info');
-          
-          // Fetch queues from API
+          // Load queues from API
           availableQueues = await fetchAllQueues();
           
           // Create dropdown with queue options
@@ -773,18 +834,17 @@
           queueDropdown.setOptions(queueOpts);
           
           // Set up event listeners
-          $('startMonitorBtn').addEventListener('click', startMonitoring);
-          $('stopMonitorBtn').addEventListener('click', stopMonitoring);
+          $('subscribeBtn').addEventListener('click', handleSubscribe);
+          $('unsubscribeBtn').addEventListener('click', handleUnsubscribe);
           $('clearHistoryBtn').addEventListener('click', () => {
-            riskEvents = [];
-            renderRiskTable();
-            updateRiskStats();
+            notifications = [];
+            renderNotifications();
+            updateStats();
           });
           
-          showMessage(`Loaded ${availableQueues.length} queues successfully`, 'success');
+          showMessage(`Loaded ${availableQueues.length} queues`, 'success');
         } catch (err) {
           showMessage('Failed to initialize: ' + err.message, 'error');
-          console.error(err);
         }
       }
 
@@ -801,7 +861,7 @@
         });
       }
 
-      // Start everything
+      // Start
       document.addEventListener('DOMContentLoaded', () => {
         setupTabs();
         handleAuth();
