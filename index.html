@@ -297,7 +297,7 @@
         <div class="controls">
           <div style="flex:2;">
             <label for="riskPhrases">Risk phrases to detect (comma separated)</label>
-            <input id="riskPhrases" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud, claim" placeholder="e.g. complaint, lawsuit, cancel">
+            <input id="riskPhrases" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud" placeholder="e.g. complaint, lawsuit, cancel">
             <div class="muted">Case-insensitive partial matching</div>
           </div>
           <div style="display: flex; gap: 8px; align-items: end;">
@@ -594,13 +594,13 @@
         return await res.json();
       }
 
-      // Step 2: Get channel info
-      async function getChannel(channelId) {
+      // Step 2: Get available topics (optional - for verification)
+      async function getAvailableTopics() {
         const res = await fetch(
-          `https://api.${region}/api/v2/notifications/channels/${channelId}`,
+          `https://api.${region}/api/v2/notifications/availabletopics`,
           { headers: authHeaders() }
         );
-        if (!res.ok) throw new Error('Failed to get channel');
+        if (!res.ok) throw new Error('Failed to get available topics');
         return await res.json();
       }
 
@@ -808,9 +808,6 @@
             webSocket = null;
           }
 
-          // Verify channel still exists
-          await getChannel(notificationChannel.id);
-
           // Resubscribe to ensure subscription is active
           await subscribeToTranscriptionNotifications(notificationChannel.id);
 
@@ -866,8 +863,13 @@
           notificationChannel = channel;
           $('channelId').innerText = channel.id;
 
-          // Step 2: Verify channel
-          await getChannel(channel.id);
+          // Step 2: Verify topic exists (optional check)
+          try {
+            const topics = await getAvailableTopics();
+            console.log('Available topics loaded', topics.length);
+          } catch (e) {
+            console.log('Topic verification skipped', e);
+          }
 
           // Step 3: Subscribe to transcription notifications topic
           showMessage('Subscribing to transcription notifications...', 'info');
