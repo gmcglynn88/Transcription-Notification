@@ -1,587 +1,677 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genesys Cloud · Real‑time Transcription Notifications</title>
-    <!-- Chart.js for optional visualisation (kept from theme) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        /* ----- design system – exact match with provided theme ----- */
-        :root {
-            --primary-color: #63AB8F;
-            --secondary-color: #4A8C7D;
-            --border-color: #DEE2E6;
-            --light-bg: #F8F9FA;
-            --card-bg: #FFFFFF;
-            --text-color: #2C3E50;
-            --text-light: #6C757D;
-            --pill: #e9f6f0;
-            --ok: #22c55e;
-            --warn: #f59e0b;
-            --bad: #ef4444;
-        }
-        body {
-            font-family: 'Aptos', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            max-width: 1400px;
-            background: var(--light-bg);
-            color: var(--text-color);
-        }
-        #logo-container { text-align: center; margin-bottom: 20px; }
-        #logo { width: 300px; }
-        h1 { margin: 0 0 16px; }
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,.1);
-        }
-        label { display: block; font-weight: 600; margin-bottom: 6px; }
-        input, select, button, textarea {
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: #fff;
-            font-size: 14px;
-        }
-        button {
-            background: var(--primary-color);
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background .2s;
-        }
-        button:hover { background: var(--secondary-color); }
-        button:disabled { background: var(--text-light); cursor: not-allowed; }
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-            align-items: start;
-        }
-        .full-width-btn { width: 100%; padding: 14px 18px; font-size: 16px; margin-top: 12px; }
-        .muted { color: var(--text-light); font-size: 12px; }
-        .section-title { margin: 0 0 10px; color: var(--secondary-color); }
-        #messageContainer { display: none; margin-top: 12px; }
-        .error-message { color: #b4231a; background: #fee2e2; border: 1px solid #fecaca; padding: 10px; border-radius: 6px; }
-        .success-message { color: #14532d; background: #dcfce7; border: 1px solid #bbf7d0; padding: 10px; border-radius: 6px; }
-        .info-message { color: #6b4e16; background: #fff7ed; border: 1px solid #ffedd5; padding: 10px; border-radius: 6px; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Genesys · Queue Monitor (styled dropdown)</title>
+  <style>
+    :root{
+      --primary-color:#63AB8F; --secondary-color:#4A8C7D; --border-color:#DEE2E6;
+      --light-bg:#F8F9FA; --card-bg:#FFFFFF; --text-color:#2C3E50; --text-light:#6C757D;
+      --pill:#e9f6f0;
+    }
 
-        /* table common */
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
-        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: top; }
-        th { background-color: var(--primary-color); color: white; font-weight: 600; }
-        tr:hover { background-color: rgba(99,171,143,.05); }
-        .table-container { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 1px; margin-top: 10px; }
+    body{
+      font-family:'Aptos','Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+      margin:20px;padding:20px;max-width:1400px;
+      background:var(--light-bg);color:var(--text-color);
+    }
 
-        /* frozen table (horizontal scroll) – same as blueprint */
-        .frozen-table-container {
-            position: relative;
-            overflow: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            margin-top: 10px;
-            max-height: 600px;
-            -webkit-overflow-scrolling: touch;
-            width: 100%;
-        }
-        .frozen-table {
-            border-collapse: separate;
-            border-spacing: 0;
-            width: max-content;
-            min-width: 100%;
-            background: white;
-        }
-        .frozen-table th, .frozen-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border-color);
-            white-space: nowrap;
-            background: white;
-        }
-        .frozen-table thead th {
-            background-color: var(--primary-color);
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .frozen-table th:first-child, .frozen-table td:first-child {
-            position: sticky;
-            left: 0;
-            background: white;
-            background-clip: padding-box;
-            z-index: 5;
-            border-right: 2px solid var(--border-color);
-            min-width: 220px;
-            box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
-        }
-        .frozen-table thead th:first-child {
-            z-index: 15;
-            background: var(--primary-color);
-        }
+    .card{
+      background:var(--card-bg);
+      border:1px solid var(--border-color);
+      border-radius:12px;
+      padding:24px;
+      margin-top:16px;
+      box-shadow:0 1px 3px rgba(0,0,0,.1);
+    }
 
-        /* main tabs */
-        .main-tab-container {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-        .main-tab-button {
-            padding: 10px 16px;
-            background: #ffffff;
-            border: 2px solid var(--primary-color);
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-        .main-tab-button.active {
-            background: var(--primary-color);
-            color: #ffffff;
-        }
-        .main-tab-content { display: none; }
-        .main-tab-content.active { display: block; }
+    label{display:block;font-weight:600;margin-bottom:6px}
+    select,input,button{
+      padding:10px;border:1px solid var(--border-color);
+      border-radius:6px;background:var(--card-bg);font-size:14px
+    }
 
-        .badge {
-            display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; border: 1px solid var(--border-color); background: #fff;
-        }
-        .badge-critical { color: #b4231a; border-color: #fecaca; background: #fee2e2; }
-        .badge-fatal { color: #fff; background: #b4231a; border-color: #b4231a; }
-        .badge-ok { color: #14532d; background: #dcfce7; border-color: #bbf7d0; }
-        .badge-info { background: var(--pill); color: var(--text-color); border-color: var(--border-color); }
+    button{
+      background:var(--primary-color);color:#fff;font-weight:600;
+      cursor:pointer;transition:background .2s
+    }
+    button:hover{background:var(--secondary-color)}
+    button:disabled{background:var(--text-light);cursor:not-allowed}
 
-        .risk-row { border-left: 4px solid transparent; }
-        .risk-high { border-left-color: var(--bad); background-color: #fef2f2; }
-        .risk-medium { border-left-color: var(--warn); background-color: #fffbeb; }
-        .risk-low { border-left-color: var(--ok); background-color: #f0fdf4; }
+    .controls{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:16px;align-items:end
+    }
 
-        .pill {
-            display: inline-block; border: 1px solid var(--border-color); border-radius: 999px;
-            padding: 2px 8px; font-size: 12px; background: #fff; margin-left: 6px;
-        }
+    .full-width-btn{width:100%;padding:14px 18px;font-size:16px;margin-top:12px}
+    .muted{color:var(--text-light);font-size:12px}
+    .loading{opacity:.6;pointer-events:none}
 
-        .checkbox-dropdown { position: relative; min-width: 220px; width: 100%; }
-        .cd-trigger { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); border-radius: 6px; background: #fff; padding: 10px; cursor: pointer; }
-        .cd-panel { position: absolute; z-index: 1000; margin-top: 6px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); width: 100%; max-height: 340px; overflow: hidden; display: none; }
-        .cd-panel.open { display: block; }
-        .cd-list { max-height: 260px; overflow: auto; }
+    /* selection section */
+    .selection-section{
+      margin-bottom:20px;
+      padding:15px;
+      border:1px solid var(--border-color);
+      border-radius:8px;
+      background-color:var(--light-bg);
+    }
+    .selection-section h3{
+      margin-top:0;color:var(--primary-color);
+    }
 
-        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    /* tabs */
+    .tab-container{
+      display:flex;
+      margin-bottom:20px;
+      border-bottom:1px solid var(--border-color);
+    }
 
-        .transcript-preview {
-            font-size: 13px;
-            background: #f9f9fc;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 8px 0;
-            border-left: 3px solid var(--primary-color);
-            max-width: 600px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-        .highlight-risk {
-            background-color: #fee2e2;
-            font-weight: 600;
-            padding: 0 2px;
-            border-radius: 3px;
-            color: #b91c1c;
-        }
-    </style>
+    .tab{
+      padding:12px 24px;
+      cursor:pointer;
+      margin-right:4px;
+      border-radius:8px 8px 0 0;
+      background:#ffffff;
+      border:2px solid var(--primary-color);
+      border-bottom:none;
+      color:var(--primary-color);
+      font-weight:600;
+      transition:background .2s, color .2s;
+    }
+
+    .tab:hover{
+      background:var(--pill);
+    }
+
+    .tab.active{
+      background:var(--primary-color);
+      color:#ffffff;
+      border-color:var(--primary-color);
+    }
+
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+
+    /* table */
+    table{
+      width:100%;border-collapse:collapse;margin-top:20px;
+    }
+    th,td{
+      border:1px solid var(--border-color);
+      padding:10px;text-align:left;vertical-align:top;
+    }
+    th{background-color:var(--primary-color);color:white}
+
+    .error-message{
+      color:#d9534f;padding:10px;margin:10px 0;
+      border:1px solid #d9534f;border-radius:4px;background:#f9f2f2;
+    }
+    .success-message{
+      color:#3c763d;padding:10px;margin:10px 0;
+      border:1px solid #3c763d;border-radius:4px;background:#dff0d8;
+    }
+
+    /* CHECKBOX DROPDOWN (styled exactly like the queue change app) */
+    .checkbox-dropdown{
+      position:relative;
+      min-width:220px;
+      width:100%;
+    }
+    .cd-trigger{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border:1px solid var(--border-color);
+      border-radius:6px;
+      background:#fff;
+      padding:10px;
+      cursor:pointer;
+      width:100%;
+      box-sizing:border-box;
+    }
+    .cd-trigger .label{
+      color:var(--text-color);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex:1;
+    }
+    .cd-trigger .count{
+      background:var(--pill);
+      border:1px solid var(--border-color);
+      border-radius:999px;
+      padding:2px 8px;
+      font-size:12px;
+      color:#2c3e50;
+      flex-shrink:0;
+      margin-left:8px;
+    }
+
+    .cd-panel{
+      position:absolute;
+      z-index:1000;
+      margin-top:6px;
+      background:#fff;
+      border:1px solid var(--border-color);
+      border-radius:8px;
+      box-shadow:0 8px 24px rgba(0,0,0,.12);
+      width:100%;
+      max-height:340px;
+      overflow:hidden;
+      display:none;
+      box-sizing:border-box;
+    }
+    .cd-panel.open{display:block}
+
+    .cd-header{
+      padding:10px;
+      border-bottom:1px solid var(--border-color);
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .cd-search{
+      flex:1;
+      border:1px solid var(--border-color);
+      border-radius:6px;
+      padding:8px;
+      width:100%;
+      box-sizing:border-box;
+    }
+    .cd-actions{display:flex;gap:8px}
+    .cd-actions button{
+      background:#eef6f2;
+      color:#2c3e50;
+      border:1px solid var(--border-color);
+      border-radius:6px;
+      padding:8px 10px;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    .cd-selectall{
+      padding:8px 12px;
+      border-bottom:1px solid var(--border-color);
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .cd-list{
+      max-height:260px;
+      overflow:auto;
+    }
+    .cd-item{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 12px;
+      border-bottom:1px solid #f1f3f5;
+    }
+    .cd-item label{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      cursor:pointer;
+      width:100%;
+    }
+
+    .cd-footer{
+      padding:8px 12px;
+      background:#fafafa;
+      border-top:1px solid var(--border-color);
+      font-size:12px;
+      color:var(--text-light);
+      display:flex;
+      justify-content:space-between;
+    }
+
+    /* mini queue tags */
+    .selected-queues-display{
+      margin-top:8px;padding:10px;background:#fff;
+      border:1px solid #dee2e6;border-radius:6px;
+      max-height:100px;overflow-y:auto;font-size:13px
+    }
+    .selected-queue-item{
+      display:inline-block;background:var(--pill);
+      border:1px solid var(--border-color);
+      border-radius:4px;padding:4px 8px;margin:2px;font-size:12px
+    }
+
+    @media (max-width:1200px){
+      .controls{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+    }
+    @media (max-width:768px){
+      .controls{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 <body>
-    <!-- logo from theme -->
-    <div id="logo-container">
-        <svg id="logo" viewBox="0 0 300 60" style="background:#f0f2f5; border-radius:30px; padding:8px;">
-            <text x="20" y="40" font-family="Aptos, Segoe UI" font-size="26" fill="#2C3E50">Genesys Cloud</text>
-            <text x="190" y="40" font-family="Aptos" font-size="18" fill="#63AB8F" font-weight="bold">Transcription Notify</text>
-        </svg>
+
+  <!-- login placeholder (mimics queue app) -->
+  <div id="loginSection" class="card" style="text-align:center;">
+    <div class="loading">Authenticating with Genesys Cloud (Ireland)...</div>
+  </div>
+
+  <!-- main app container -->
+  <div id="appContent" style="display:none;">
+    <div id="messageContainer" style="display:none;"></div>
+
+    <div class="tab-container">
+      <div class="tab active" data-tab="monitor">Queue Monitor</div>
+      <div class="tab" data-tab="about">About</div>
     </div>
 
-    <!-- AUTH CARD (same as blueprint) -->
-    <div id="authCard" class="card" style="display:block;">
-        <div id="auth-message" class="info-message">Authenticating with Genesys Cloud (Ireland)…</div>
+    <!-- MONITOR TAB (queue dropdown & live view) -->
+    <div id="monitorTab" class="tab-content active">
+      <div class="card">
+        <h2 class="section-title">📡 Live Queue Membership</h2>
+
+        <!-- Queue selector (styled like the queue change app) -->
+        <div style="max-width:400px; margin-bottom:20px;">
+          <label>Select Queues to monitor</label>
+          <div id="queueMonitorDropdown" class="checkbox-dropdown"></div>
+          <div class="muted" style="margin-top:4px;">Choose one or multiple queues</div>
+        </div>
+
+        <!-- selected queues display (like bulk display) -->
+        <div class="selected-queues-display" id="selectedQueuesDisplay">
+          <div class="muted">No queues selected</div>
+        </div>
+
+        <!-- action buttons -->
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin:20px 0;">
+          <button id="fetchQueueMembersBtn" class="full-width-btn" style="width:auto; min-width:180px;">
+            <span class="loading-spinner" style="display:none;"></span>
+            <span class="btn-text">🔍 Load members</span>
+          </button>
+          <button id="clearSelectionBtn" class="full-width-btn" style="width:auto; background:#6c757d;">Clear selection</button>
+        </div>
+      </div>
+
+      <!-- members table (displays users per queue) -->
+      <div class="card">
+        <h2 class="section-title">👥 Agents in selected queues</h2>
+        <table id="queueMembersTable">
+          <thead>
+            <tr><th>Queue name</th><th>Agent name</th><th>Agent ID</th><th>Joined</th></tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" class="muted" style="text-align:center;">Select queues and click "Load members"</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- main app (hidden until auth) -->
-    <div id="appContent" style="display:none;">
-        <div id="messageContainer"></div>
-
-        <!-- main tab navigation -->
-        <div class="main-tab-container">
-            <button class="main-tab-button active" data-tab="tab-dashboard">Risk Dashboard</button>
-            <button class="main-tab-button" data-tab="tab-guide">How to use</button>
-        </div>
-
-        <!-- DASHBOARD TAB (real‑time risk) -->
-        <div id="tab-dashboard" class="main-tab-content active">
-            <div class="card">
-                <h2 class="section-title">🎙️ Live transcription monitor</h2>
-                <div class="controls">
-                    <div>
-                        <label for="queueDropdown">Queue / Work Team</label>
-                        <div id="queueDropdown" class="checkbox-dropdown"></div>
-                        <span class="muted">Select teams to monitor</span>
-                    </div>
-                    <div>
-                        <label for="riskKeywords">Risk phrases (comma separated)</label>
-                        <input id="riskKeywords" type="text" value="complaint, lawsuit, cancel, not happy, refund, chargeback, supervisor, escalate, terminate, breach, policy violation, fraud, inappropriate" placeholder="e.g. complaint, cancel, sue">
-                    </div>
-                    <div style="display: flex; gap: 8px; align-items: end;">
-                        <button id="connectBtn" class="full-width-btn" style="margin-top:0;">
-                            <span class="loading-spinner" style="display:none;"></span>
-                            <span class="btn-text">▶ Start listening</span>
-                        </button>
-                        <button id="disconnectBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>⏹ Stop</button>
-                    </div>
-                </div>
-                <div style="margin-top: 8px;">
-                    <span class="badge badge-info">Status: <span id="wsStatus">Disconnected</span></span>
-                    <span class="badge badge-info">Active filters: <span id="filterSummary">none</span></span>
-                </div>
-            </div>
-
-            <!-- live risk cards & table -->
-            <div class="card">
-                <h2 class="section-title">⚠️ Recent risk events</h2>
-                <div class="kpis" style="grid-template-columns: repeat(4,1fr); margin-bottom: 20px;" id="riskStats">
-                    <div class="kpi"><span class="label">High severity</span><span class="value" id="statHigh">0</span></div>
-                    <div class="kpi"><span class="label">Medium</span><span class="value" id="statMed">0</span></div>
-                    <div class="kpi"><span class="label">Low</span><span class="value" id="statLow">0</span></div>
-                    <div class="kpi"><span class="label">Agents at risk</span><span class="value" id="statAgents">0</span></div>
-                </div>
-
-                <div class="frozen-table-container">
-                    <table class="frozen-table" id="riskTable">
-                        <thead>
-                            <tr>
-                                <th>Time (UTC)</th><th>Agent</th><th>Customer</th><th>Risk phrase</th><th>Severity</th><th>Transcript snippet</th><th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="riskTableBody">
-                            <tr><td colspan="7" class="muted" style="text-align:center;">No events yet. Start listening and trigger phrases in a call.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div style="margin-top:12px;">
-                    <button id="clearHistoryBtn" class="full-width-btn" style="background:var(--text-light);">Clear history</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- HOW TO USE TAB (exact copy from blueprint, condensed) -->
-        <div id="tab-guide" class="main-tab-content">
-            <div class="card">
-                <h2 class="section-title">How to use – Real‑time risk monitor</h2>
-                <div class="guide-step"><h3>🔐 Authentication</h3><p>OAuth implicit grant (same as blueprint). You’ll be redirected to login.mypurecloud.ie. After success, token is stored in session.</p></div>
-                <div class="guide-step"><h3>🎧 Start monitoring</h3><p>Select work teams (optional), adjust risk keywords, and click "Start listening". The app opens a notification stream via polling the transcription notifications API (polling every 5s for demo). Each notification is scanned for risk phrases.</p></div>
-                <div class="guide-step"><h3>⚠️ Risk levels</h3><p><span class="badge badge-fatal">High</span> – words like "lawsuit, breach, fraud" <span class="badge badge-critical">Medium</span> – "complaint, cancel, supervisor" <span class="badge badge-ok">Low</span> – other matches. Hover shows phrase.</p></div>
-                <div class="guide-step"><h3>⚙️ Region & API</h3><p>Fixed to Ireland (mypurecloud.ie). Uses the exact transcription notifications endpoint: <code>https://api.mypurecloud.ie/api/v2/speechandtextanalytics/transcriptnotifications</code> (simulated via demo data but fully structured).</p></div>
-            </div>
-        </div>
+    <!-- ABOUT TAB (simple) -->
+    <div id="aboutTab" class="tab-content">
+      <div class="card">
+        <h2>Queue Monitor · styled dropdown</h2>
+        <p>Uses the exact checkbox dropdown from the queue change tool. Fetches real queue data from <code>api.mypurecloud.ie</code>.</p>
+        <p><strong>OAuth:</strong> implicit grant, same client_id.</p>
+        <p>Select queues → click "Load members" → shows all members of those queues.</p>
+      </div>
     </div>
 
-    <script>
-        (function() {
-            // ----- OAuth config -----
-            const clientId = 'fe305808-b368-4547-8af9-325d28d552bb'; 
-            const redirectUri = 'https://gmcglynn88.github.io/Transcription-Notification/'; 
-            const region = 'mypurecloud.ie';
-            const oauthUrl = `https://login.${region}/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}&state=qa`;
+  </div>
 
-            const state = {
-                accessToken: null,
-                teams: [],
-                activeMonitor: false,
-                events: [],            // risk events
-                pollInterval: null,
-                filterTeams: new Set(),
-                keywords: ['complaint','cancel','lawsuit','breach','fraud','refund','chargeback','supervisor','escalate','terminate','not happy','policy violation','inappropriate']
-            };
+  <script>
+    (function() {
+      /********* OAuth config (same client_id, region IE) *********/
+      const clientId = 'fe305808-b368-4547-8af9-325d28d552bb';
+      const redirectUri = 'https://gmcglynn88.github.io/Queue-updater/'; // from original queue app
+      const oauthUrl =
+        `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-            // helpers
-            const $ = id => document.getElementById(id);
-            function showMessage(msg, type='info') {
-                const box = $('messageContainer');
-                box.innerHTML = `<div class="${type}-message">${msg}</div>`;
-                box.style.display = 'block';
-                if (type==='success') setTimeout(()=>box.style.display='none', 4000);
-            }
+      let token = null;
+      let availableQueues = [];            // all queues fetched from API
+      let queueDropdown = null;             // dropdown instance
 
-            // ----- checkbox dropdown (reused from blueprint style) -----
-            function createTeamDropdown(containerId) {
-                const root = $(containerId); if (!root) return null;
-                root.innerHTML = '';
-                const trigger = document.createElement('div'); trigger.className = 'cd-trigger';
-                trigger.innerHTML = '<span class="label">Select teams</span><span class="count">0 selected</span>';
-                root.appendChild(trigger);
-                const panel = document.createElement('div'); panel.className = 'cd-panel';
-                panel.innerHTML = `
-                    <div class="cd-header"><input type="text" class="cd-search" placeholder="Search team..." /></div>
-                    <div class="cd-selectall"><label><input type="checkbox" data-cd="selectall"/> Select all</label></div>
-                    <div class="cd-list"></div>
-                    <div class="cd-footer"><span data-cd="summary">0 selected</span></div>
-                `;
-                root.appendChild(panel);
-                const list = panel.querySelector('.cd-list');
-                const search = panel.querySelector('.cd-search');
-                const selectAll = panel.querySelector('[data-cd="selectall"]');
-                const summary = panel.querySelector('[data-cd="summary"]');
-                const countSpan = trigger.querySelector('.count');
+      // helpers
+      function $(id) { return document.getElementById(id); }
+      function showMessage(msg, type='error') {
+        const box = $('messageContainer');
+        box.innerHTML = `<div class="${type}-message">${msg}</div>`;
+        box.style.display = 'block';
+        if (type === 'success') setTimeout(() => box.style.display = 'none', 4000);
+      }
 
-                let options = [];
-                let selected = new Set();
+      function authHeaders() {
+        return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+      }
 
-                function render(filter='') {
-                    const ft = filter.trim().toLowerCase();
-                    list.innerHTML = '';
-                    const filtered = !ft ? options : options.filter(o => (o.label||'').toLowerCase().includes(ft));
-                    if (!filtered.length) { list.innerHTML = '<div class="cd-item muted">No matches</div>'; return; }
-                    filtered.forEach(o => {
-                        const row = document.createElement('div'); row.className = 'cd-item';
-                        const id = `cb_${o.value}`;
-                        row.innerHTML = `<label for="${id}"><input type="checkbox" id="${id}" value="${o.value}" ${selected.has(o.value)?'checked':''}> <span>${o.label}</span></label>`;
-                        row.querySelector('input').addEventListener('change', e => {
-                            if (e.target.checked) selected.add(o.value);
-                            else selected.delete(o.value);
-                            updateSummary();
-                            updateSelectAll();
-                            applyFilterToState();
-                        });
-                        list.appendChild(row);
-                    });
-                }
-                function updateSummary() {
-                    countSpan.innerText = `${selected.size} selected`;
-                    summary.innerText = `${selected.size} selected`;
-                }
-                function updateSelectAll() {
-                    selectAll.indeterminate = selected.size>0 && selected.size<options.length;
-                    selectAll.checked = options.length>0 && selected.size===options.length;
-                }
-                function applyFilterToState() {
-                    state.filterTeams = new Set(selected);
-                    $('filterSummary').innerText = selected.size ? `Teams: ${selected.size}` : 'none';
-                }
+      /********* CREATE CHECKBOX DROPDOWN (exact replica from queue change app) *********/
+      function createCheckboxDropdown(containerId, { placeholder, searchPlaceholder }) {
+        const root = $(containerId);
+        if (!root) return null;
+        root.innerHTML = '';
 
-                trigger.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    panel.classList.toggle('open');
-                    if (panel.classList.contains('open')) search.focus();
-                });
-                document.addEventListener('click', (e) => { if (!root.contains(e.target)) panel.classList.remove('open'); });
-                search.addEventListener('input', () => render(search.value));
-                selectAll.addEventListener('change', () => {
-                    if (selectAll.checked) options.forEach(o => selected.add(o.value));
-                    else selected.clear();
-                    render(search.value);
-                    updateSummary();
-                    applyFilterToState();
-                });
+        const trigger = document.createElement('div');
+        trigger.className = 'cd-trigger';
+        trigger.innerHTML = `<span class="label">${placeholder}</span><span class="count">0 selected</span>`;
+        root.appendChild(trigger);
 
-                return {
-                    setOptions: (opts) => { options = opts || []; render(search.value); updateSummary(); updateSelectAll(); },
-                    getSelected: () => Array.from(selected)
-                };
-            }
+        const panel = document.createElement('div');
+        panel.className = 'cd-panel';
+        panel.innerHTML = `
+          <div class="cd-header">
+            <input type="text" class="cd-search" placeholder="${searchPlaceholder}" />
+            <div class="cd-actions"><button data-cd="clear">Clear</button></div>
+          </div>
+          <div class="cd-selectall"><label><input type="checkbox" data-cd="selectall"/> Select all</label></div>
+          <div class="cd-list"></div>
+          <div class="cd-footer"><span data-cd="summary">0 selected</span><span>Click outside to close</span></div>
+        `;
+        root.appendChild(panel);
 
-            // ----- load teams (from api, but we can mock) -----
-            async function fetchTeams() {
-                if (!state.accessToken) return [];
-                // real api: but we'll mock with some names (blueprint uses real fetch, but demo)
-                return new Promise(res => {
-                    setTimeout(() => {
-                        const mock = [
-                            { id: 'team1', name: 'Customer Support' },
-                            { id: 'team2', name: 'Billing' },
-                            { id: 'team3', name: 'Retentions' },
-                            { id: 'team4', name: 'Tech Support' }
-                        ];
-                        state.teams = mock;
-                        res(mock);
-                    }, 200);
-                });
-            }
+        const list = panel.querySelector('.cd-list');
+        const search = panel.querySelector('.cd-search');
+        const clearBtn = panel.querySelector('[data-cd="clear"]');
+        const selectAll = panel.querySelector('[data-cd="selectall"]');
+        const summary = panel.querySelector('[data-cd="summary"]');
+        const countSpan = trigger.querySelector('.count');
 
-            // ----- simulate risk detection from transcription notification -----
-            function generateMockNotification() {
-                const agents = ['Alice Johnson', 'Bob Smith', 'Carla Diaz', 'David Chen', 'Elena Garcia'];
-                const customers = ['+353 87 123 4567', 'customer@mail.ie', 'John D.', 'Mary S.', 'Peter M.'];
-                const snippets = [
-                    "I want to cancel my service immediately, this is not working",
-                    "I'm not happy with the charges, I'd like to speak to a supervisor",
-                    "If you don't refund I will have to file a chargeback",
-                    "This is a complaint about your policy violation",
-                    "We need to escalate this to legal, potential breach",
-                    "Thank you for your help, everything is fine",
-                    "I demand a refund right now, or I'll dispute",
-                    "Your agent was very rude, I want to terminate",
-                    "Fraud alert on my account, this is unacceptable"
-                ];
-                const randomAgent = agents[Math.floor(Math.random() * agents.length)];
-                const randomCust = customers[Math.floor(Math.random() * customers.length)];
-                const text = snippets[Math.floor(Math.random() * snippets.length)];
-                // determine risk
-                const lowSet = ['refund', 'cancel', 'complaint', 'supervisor', 'escalate', 'terminate', 'not happy'];
-                const highSet = ['lawsuit', 'breach', 'fraud', 'chargeback', 'policy violation', 'inappropriate'];
-                let severity = 'low';
-                for (let w of highSet) if (text.toLowerCase().includes(w)) { severity = 'high'; break; }
-                if (severity === 'low') for (let w of lowSet) if (text.toLowerCase().includes(w)) { severity = 'medium'; break; }
+        let options = [];
+        let selected = new Set();
 
-                return {
-                    id: Date.now() + '-' + Math.random(),
-                    timestamp: new Date().toISOString(),
-                    agentName: randomAgent,
-                    customer: randomCust,
-                    snippet: text,
-                    phrase: text.split(' ').slice(-3).join(' '), // rough
-                    severity
-                };
-            }
+        function render(filter = '') {
+          const ft = filter.toLowerCase().trim();
+          list.innerHTML = '';
+          const filtered = !ft ? options : options.filter(o => (o.label || '').toLowerCase().includes(ft));
 
-            function addRiskEvent(evt) {
-                state.events.unshift(evt);
-                if (state.events.length > 50) state.events.pop();
-                renderTable();
-                updateStats();
-            }
+          if (!filtered.length) {
+            list.innerHTML = `<div class="cd-item" style="color:#6C757D">No matches</div>`;
+            return;
+          }
 
-            function renderTable() {
-                const tbody = $('riskTableBody');
-                if (!state.events.length) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;">No events yet.</td></tr>';
-                    return;
-                }
-                const rows = state.events.map(e => {
-                    const time = new Date(e.timestamp).toLocaleTimeString('en-GB', { hour12: false });
-                    let severityClass = e.severity === 'high' ? 'badge-fatal' : (e.severity === 'medium' ? 'badge-critical' : 'badge-ok');
-                    let rowClass = e.severity === 'high' ? 'risk-high' : (e.severity === 'medium' ? 'risk-medium' : 'risk-low');
-                    return `<tr class="${rowClass}">
-                        <td>${time}</td>
-                        <td>${e.agentName}</td>
-                        <td>${e.customer}</td>
-                        <td><span class="pill">${e.phrase}</span></td>
-                        <td><span class="badge ${severityClass}">${e.severity}</span></td>
-                        <td><div class="transcript-preview">${e.snippet.replace(/(complaint|cancel|lawsuit|breach|fraud|refund|chargeback|supervisor|escalate|terminate|not happy|policy violation|inappropriate)/gi, '<span class="highlight-risk">$1</span>')}</div></td>
-                        <td><button class="pill" style="background:var(--primary-color); color:white; border:none;">🔊 listen</button></td>
-                    </tr>`;
-                }).join('');
-                tbody.innerHTML = rows;
-            }
-
-            function updateStats() {
-                const high = state.events.filter(e => e.severity === 'high').length;
-                const med = state.events.filter(e => e.severity === 'medium').length;
-                const low = state.events.filter(e => e.severity === 'low').length;
-                const uniqueAgents = new Set(state.events.map(e => e.agentName)).size;
-                $('statHigh').innerText = high;
-                $('statMed').innerText = med;
-                $('statLow').innerText = low;
-                $('statAgents').innerText = uniqueAgents;
-            }
-
-            function startPolling() {
-                if (state.pollInterval) clearInterval(state.pollInterval);
-                state.activeMonitor = true;
-                $('wsStatus').innerText = 'Listening (poll)';
-                $('connectBtn').disabled = true;
-                $('disconnectBtn').disabled = false;
-                showMessage('Monitoring started – polling transcription notifications', 'success');
-
-                // every 5 seconds generate a random risk (simulate real notification)
-                state.pollInterval = setInterval(() => {
-                    if (!state.activeMonitor) return;
-                    // respect team filter (mock)
-                    const selectedTeams = state.filterTeams;
-                    // if no teams selected or if team matches any (mock)
-                    if (selectedTeams.size === 0 || Math.random() > 0.3) { // some pass
-                        const newEvt = generateMockNotification();
-                        addRiskEvent(newEvt);
-                        // optionally flash
-                    }
-                }, 5000);
-            }
-
-            function stopPolling() {
-                state.activeMonitor = false;
-                if (state.pollInterval) clearInterval(state.pollInterval);
-                state.pollInterval = null;
-                $('wsStatus').innerText = 'Disconnected';
-                $('connectBtn').disabled = false;
-                $('disconnectBtn').disabled = true;
-                showMessage('Monitoring stopped', 'info');
-            }
-
-            // --- OAuth handling (exact from blueprint) ---
-            function handleAuth() {
-                const hash = window.location.hash.substring(1);
-                const params = new URLSearchParams(hash);
-                const token = params.get('access_token');
-                if (token) {
-                    sessionStorage.setItem('purecloud_token', token);
-                    const exp = parseInt(params.get('expires_in')||'0',10);
-                    if (exp) sessionStorage.setItem('purecloud_token_exp', Date.now() + (exp-60)*1000);
-                    window.location.hash = '';
-                    startApp(token);
-                } else {
-                    const stored = sessionStorage.getItem('purecloud_token');
-                    const exp = parseInt(sessionStorage.getItem('purecloud_token_exp')||'0',10);
-                    if (stored && (!exp || Date.now() < exp)) startApp(stored);
-                    else {
-                        $('auth-message').innerHTML = `No valid token. <a href="${oauthUrl}">Login with Genesys</a>`;
-                    }
-                }
-            }
-
-            async function startApp(token) {
-                state.accessToken = token;
-                $('authCard').style.display = 'none';
-                $('appContent').style.display = 'block';
-                showMessage('Authenticated successfully', 'success');
-
-                // init dropdown
-                const dd = createTeamDropdown('queueDropdown');
-                // load mock teams
-                const teams = await fetchTeams();
-                dd.setOptions(teams.map(t => ({ value: t.id, label: t.name })));
-
-                // load keywords from input
-                $('riskKeywords').value = state.keywords.join(', ');
-
-                // connect button
-                $('connectBtn').onclick = () => {
-                    // parse keywords
-                    const kw = $('riskKeywords').value.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
-                    if (kw.length) state.keywords = kw;
-                    startPolling();
-                };
-                $('disconnectBtn').onclick = stopPolling;
-                $('clearHistoryBtn').onclick = () => {
-                    state.events = [];
-                    renderTable();
-                    updateStats();
-                };
-            }
-
-            // initialise auth
-            handleAuth();
-
-            // tab switching (same as blueprint)
-            document.querySelectorAll('.main-tab-button').forEach(btn => {
-                btn.addEventListener('click', e => {
-                    document.querySelectorAll('.main-tab-button').forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
-                    $(e.target.dataset.tab).classList.add('active');
-                });
+          filtered.forEach(o => {
+            const id = `${containerId}_${o.value}`;
+            const row = document.createElement('div');
+            row.className = 'cd-item';
+            row.innerHTML = `
+              <label for="${id}">
+                <input type="checkbox" id="${id}" value="${o.value}" ${selected.has(o.value) ? 'checked' : ''}/>
+                <span>${o.label}</span>
+              </label>
+            `;
+            const cb = row.querySelector('input');
+            cb.addEventListener('change', () => {
+              cb.checked ? selected.add(o.value) : selected.delete(o.value);
+              updateSummary();
+              updateSelectAllState();
+              updateSelectedDisplay();   // update the pretty queue tags
             });
-        })();
-    </script>
+            list.appendChild(row);
+          });
+        }
+
+        function updateSummary() {
+          countSpan.textContent = `${selected.size} selected`;
+          summary.textContent = `${selected.size} selected`;
+        }
+
+        function updateSelectAllState() {
+          const total = options.length;
+          selectAll.indeterminate = selected.size > 0 && selected.size < total;
+          selectAll.checked = total > 0 && selected.size === total;
+        }
+
+        // called when selection changes – updates the nice queue tags
+        function updateSelectedDisplay() {
+          const displayDiv = $('selectedQueuesDisplay');
+          const sel = getSelectedValues();
+          if (!sel.length) {
+            displayDiv.innerHTML = `<div class="muted">No queues selected</div>`;
+            return;
+          }
+          const names = sel.map(id => {
+            const q = availableQueues.find(q => q.id === id);
+            return q ? q.name : id;
+          });
+          displayDiv.innerHTML = names.map(n => `<div class="selected-queue-item">${n}</div>`).join('');
+        }
+
+        // open/close
+        trigger.addEventListener('click', () => { panel.classList.toggle('open'); search.focus(); });
+        document.addEventListener('click', (e) => { if (!root.contains(e.target)) panel.classList.remove('open'); });
+        search.addEventListener('input', () => render(search.value));
+
+        clearBtn.addEventListener('click', () => {
+          selected.clear();
+          render(search.value);
+          updateSummary();
+          updateSelectAllState();
+          updateSelectedDisplay();
+        });
+
+        selectAll.addEventListener('change', () => {
+          if (selectAll.checked) options.forEach(o => selected.add(o.value));
+          else selected.clear();
+          render(search.value);
+          updateSummary();
+          updateSelectAllState();
+          updateSelectedDisplay();
+        });
+
+        function setOptions(arr) {
+          options = arr || [];
+          // remove any selected that no longer exists
+          [...selected].forEach(v => { if (!options.some(o => o.value === v)) selected.delete(v); });
+          render(search.value);
+          updateSummary();
+          updateSelectAllState();
+          updateSelectedDisplay();
+        }
+
+        function getSelectedValues() { return [...selected]; }
+
+        render();
+        return { setOptions, getSelectedValues };
+      }
+
+      /********* fetch all queues from API (Ireland) *********/
+      async function fetchAllQueues() {
+        let all = [];
+        let page = 1;
+        const pageSize = 100;
+        let total = 0;
+        do {
+          const res = await fetch(
+            `https://api.mypurecloud.ie/api/v2/routing/queues?pageNumber=${page}&pageSize=${pageSize}`,
+            { headers: authHeaders() }
+          );
+          if (!res.ok) throw new Error('Failed to fetch queues');
+          const data = await res.json();
+          all = all.concat(data.entities || []);
+          total = data.total || 0;
+          page++;
+        } while (all.length < total);
+        return all;
+      }
+
+      /********* fetch members of a specific queue *********/
+      async function fetchQueueMembers(queueId) {
+        let members = [];
+        let page = 1;
+        const pageSize = 100;
+        let total = 0;
+        do {
+          const res = await fetch(
+            `https://api.mypurecloud.ie/api/v2/routing/queues/${queueId}/members?pageNumber=${page}&pageSize=${pageSize}`,
+            { headers: authHeaders() }
+          );
+          if (!res.ok) throw new Error(`Failed members for queue ${queueId}`);
+          const data = await res.json();
+          members = members.concat(data.entities || []);
+          total = data.total || 0;
+          page++;
+        } while (members.length < total);
+        return members;
+      }
+
+      /********* fetch all users to resolve names (optional, we can also use embedded user) *********/
+      async function fetchAllUsers() {
+        let all = [];
+        let page = 1;
+        const pageSize = 100;
+        let total = 0;
+        do {
+          const res = await fetch(
+            `https://api.mypurecloud.ie/api/v2/users?pageNumber=${page}&pageSize=${pageSize}`,
+            { headers: authHeaders() }
+          );
+          if (!res.ok) throw new Error('Failed users');
+          const data = await res.json();
+          all = all.concat(data.entities || []);
+          total = data.total || 0;
+          page++;
+        } while (all.length < total);
+        return all;
+      }
+
+      // store users for name resolution
+      let userMap = new Map();
+
+      /********* load initial data *********/
+      async function initializeApp() {
+        try {
+          // fetch queues & users in parallel
+          const [queues, users] = await Promise.all([fetchAllQueues(), fetchAllUsers()]);
+          availableQueues = queues;
+          userMap = new Map(users.filter(u => u.name).map(u => [u.id, u.name]));
+
+          // prepare dropdown options
+          const queueOpts = availableQueues
+            .map(q => ({ value: q.id, label: q.name }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+
+          // create dropdown
+          queueDropdown = createCheckboxDropdown('queueMonitorDropdown', {
+            placeholder: 'Select queues to monitor',
+            searchPlaceholder: 'Search queues...'
+          });
+
+          queueDropdown.setOptions(queueOpts);
+
+          // attach load button
+          $('fetchQueueMembersBtn').addEventListener('click', loadQueueMembers);
+          $('clearSelectionBtn').addEventListener('click', () => {
+            if (queueDropdown) queueDropdown.setOptions(queueOpts); // reset selected (clear)
+          });
+
+          showMessage('Queues loaded successfully', 'success');
+        } catch (err) {
+          showMessage('Initialisation failed: ' + err.message);
+        }
+      }
+
+      /********* load members for selected queues and render table *********/
+      async function loadQueueMembers() {
+        if (!queueDropdown) return;
+        const selectedIds = queueDropdown.getSelectedValues();
+        if (!selectedIds.length) {
+          showMessage('Please select at least one queue', 'error');
+          return;
+        }
+
+        const btn = $('fetchQueueMembersBtn');
+        const spinner = btn.querySelector('.loading-spinner');
+        const btnText = btn.querySelector('.btn-text');
+        if (spinner) spinner.style.display = 'inline-block';
+        if (btnText) btnText.textContent = 'Loading...';
+        btn.disabled = true;
+
+        const tbody = document.querySelector('#queueMembersTable tbody');
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">Fetching members...</td></tr>';
+
+        try {
+          const rows = [];
+          for (const queueId of selectedIds) {
+            const queue = availableQueues.find(q => q.id === queueId);
+            const queueName = queue ? queue.name : queueId;
+
+            const members = await fetchQueueMembers(queueId);
+            // each member: { user: { id, name? } , joined }
+            if (members.length === 0) {
+              rows.push(`<tr><td>${queueName}</td><td colspan="3" class="muted">No members</td></tr>`);
+            } else {
+              members.forEach(m => {
+                const userId = m.user?.id || '';
+                // use embedded name if available, else fallback to map or id
+                let userName = m.user?.name || userMap.get(userId) || '(unknown)';
+                const joined = m.joined ? new Date(m.joined).toLocaleString() : '—';
+                rows.push(`<tr><td>${queueName}</td><td>${userName}</td><td><code>${userId}</code></td><td>${joined}</td></tr>`);
+              });
+            }
+          }
+          tbody.innerHTML = rows.join('') || '<tr><td colspan="4" class="muted">No members found</td></tr>';
+          showMessage(`Loaded members from ${selectedIds.length} queue(s)`, 'success');
+        } catch (err) {
+          tbody.innerHTML = '<tr><td colspan="4" class="error-message">Error loading members</td></tr>';
+          showMessage(err.message);
+        } finally {
+          if (spinner) spinner.style.display = 'none';
+          if (btnText) btnText.textContent = '🔍 Load members';
+          btn.disabled = false;
+        }
+      }
+
+      /********* OAuth handling (same as queue tool) *********/
+      function handleAuth() {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        token = params.get('access_token');
+
+        if (!token) {
+          // try sessionStorage (optional)
+          token = sessionStorage.getItem('purecloud_token');
+          const exp = sessionStorage.getItem('purecloud_token_exp');
+          if (token && exp && Date.now() < parseInt(exp)) {
+            // valid
+          } else {
+            window.location.href = oauthUrl;
+            return;
+          }
+        } else {
+          // store in session
+          sessionStorage.setItem('purecloud_token', token);
+          const expiresIn = params.get('expires_in');
+          if (expiresIn) {
+            const exp = Date.now() + (parseInt(expiresIn) - 60) * 1000;
+            sessionStorage.setItem('purecloud_token_exp', exp);
+          }
+          // clean hash
+          history.replaceState(null, document.title, window.location.pathname);
+        }
+
+        $('loginSection').style.display = 'none';
+        $('appContent').style.display = 'block';
+
+        // initialise app
+        initializeApp().catch(e => showMessage('Init error: ' + e.message));
+      }
+
+      // tab switching (same style)
+      function setupTabs() {
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            $(tab.dataset.tab + 'Tab').classList.add('active');
+          });
+        });
+      }
+
+      // start
+      document.addEventListener('DOMContentLoaded', () => {
+        setupTabs();
+        handleAuth();
+      });
+    })();
+  </script>
 </body>
 </html>
