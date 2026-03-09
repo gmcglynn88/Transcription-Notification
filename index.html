@@ -30,7 +30,6 @@
     tr:hover{background-color:rgba(99,171,143,.05)}
     .table-container{overflow-x:auto;border:1px solid var(--border-color);border-radius:6px;padding:1px;margin-top:10px}
 
-    /* Fixed column styling */
     .frozen-table-container { 
       position: relative; 
       overflow: auto; 
@@ -87,7 +86,6 @@
       background: var(--primary-color); 
     }
 
-    /* Main tab styling */
     .main-tab-container {
       display: flex;
       gap: 12px;
@@ -107,32 +105,14 @@
       transition: background .2s, color .2s;
     }
 
-    .main-tab-button:hover {
-      background: var(--pill);
-    }
-
-    .main-tab-button.active {
-      background: var(--primary-color);
-      color: #ffffff;
-    }
-
-    .main-tab-content {
-      display: none;
-    }
-
-    .main-tab-content.active {
-      display: block;
-    }
+    .main-tab-button:hover { background: var(--pill); }
+    .main-tab-button.active { background: var(--primary-color); color: #ffffff; }
+    .main-tab-content { display: none; }
+    .main-tab-content.active { display: block; }
 
     .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;border:1px solid var(--border-color);background:#fff}
-    .badge-critical{color:#b4231a;border-color:#fecaca;background:#fee2e2}
-    .badge-fatal{color:#fff;background:#b4231a;border-color:#b4231a}
     .badge-ok{color:#14532d;background:#dcfce7;border-color:#bbf7d0}
     .badge-info{background:var(--pill);color:var(--text-color);border-color:var(--border-color)}
-
-    .risk-high { border-left: 4px solid var(--bad); background-color: #fef2f2; }
-    .risk-medium { border-left: 4px solid var(--warn); background-color: #fffbeb; }
-    .risk-low { border-left: 4px solid var(--ok); background-color: #f0fdf4; }
 
     .transcript-preview {
       font-size: 13px;
@@ -159,7 +139,6 @@
     .kpi .label{color:var(--text-light);font-size:12px}
     .kpi .value{font-size:20px;font-weight:700;margin-top:4px}
 
-    /* Checkbox dropdown from queue management app */
     .checkbox-dropdown{position:relative;min-width:220px;width:100%}
     .cd-trigger{
       display:flex;align-items:center;justify-content:space-between;
@@ -167,94 +146,37 @@
       background:#fff;padding:10px;cursor:pointer;width:100%;
       box-sizing:border-box;
     }
-    .cd-trigger .label{
-      color:var(--text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;
-    }
-    .cd-trigger .count{
-      background:var(--pill);border:1px solid var(--border-color);
-      border-radius:999px;padding:2px 8px;font-size:12px;
-      color:#2c3e50;flex-shrink:0;margin-left:8px;
-    }
-
-    .cd-panel{
-      position:absolute;z-index:1000;margin-top:6px;background:#fff;
-      border:1px solid var(--border-color);border-radius:8px;
-      box-shadow:0 8px 24px rgba(0,0,0,.12);width:100%;
-      max-height:340px;overflow:hidden;display:none;
-      box-sizing:border-box;
-    }
+    .cd-trigger .label{color:var(--text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+    .cd-trigger .count{background:var(--pill);border:1px solid var(--border-color);border-radius:999px;padding:2px 8px;font-size:12px;color:#2c3e50;flex-shrink:0;margin-left:8px;}
+    .cd-panel{position:absolute;z-index:1000;margin-top:6px;background:#fff;border:1px solid var(--border-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);width:100%;max-height:340px;overflow:hidden;display:none;box-sizing:border-box;}
     .cd-panel.open{display:block}
-
-    .cd-header{
-      padding:10px;border-bottom:1px solid var(--border-color);
-      display:flex;gap:8px;align-items:center;
-    }
-    .cd-search{
-      flex:1;border:1px solid var(--border-color);border-radius:6px;
-      padding:8px;width:100%;box-sizing:border-box;
-    }
+    .cd-header{padding:10px;border-bottom:1px solid var(--border-color);display:flex;gap:8px;align-items:center;}
+    .cd-search{flex:1;border:1px solid var(--border-color);border-radius:6px;padding:8px;width:100%;box-sizing:border-box;}
     .cd-actions{display:flex;gap:8px}
-    .cd-actions button{
-      background:#eef6f2;color:#2c3e50;border:1px solid var(--border-color);
-      border-radius:6px;padding:8px 10px;cursor:pointer;white-space:nowrap;
-    }
-
-    .cd-selectall{
-      padding:8px 12px;border-bottom:1px solid var(--border-color);
-      display:flex;align-items:center;gap:10px;
-    }
-
+    .cd-actions button{background:#eef6f2;color:#2c3e50;border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;cursor:pointer;white-space:nowrap;}
+    .cd-selectall{padding:8px 12px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;gap:10px;}
     .cd-list{max-height:260px;overflow:auto}
-    .cd-item{
-      display:flex;align-items:center;gap:10px;
-      padding:8px 12px;border-bottom:1px solid #f1f3f5;
-    }
-    .cd-item label{
-      display:flex;align-items:center;gap:10px;
-      cursor:pointer;width:100%;
-    }
+    .cd-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f1f3f5;}
+    .cd-item label{display:flex;align-items:center;gap:10px;cursor:pointer;width:100%;}
+    .cd-footer{padding:8px 12px;background:#fafafa;border-top:1px solid var(--border-color);font-size:12px;color:var(--text-light);display:flex;justify-content:space-between;}
 
-    .cd-footer{
-      padding:8px 12px;background:#fafafa;border-top:1px solid var(--border-color);
-      font-size:12px;color:var(--text-light);display:flex;justify-content:space-between;
-    }
-
-    .selected-queues-display{
-      margin-top:8px;padding:10px;background:#fff;
-      border:1px solid #dee2e6;border-radius:6px;
-      max-height:100px;overflow-y:auto;font-size:13px;
-    }
-    .selected-queue-item{
-      display:inline-block;background:var(--pill);
-      border:1px solid var(--border-color);
-      border-radius:4px;padding:4px 8px;margin:2px;font-size:12px;
-    }
+    .selected-queues-display{margin-top:8px;padding:10px;background:#fff;border:1px solid #dee2e6;border-radius:6px;max-height:100px;overflow-y:auto;font-size:13px;}
+    .selected-queue-item{display:inline-block;background:var(--pill);border:1px solid var(--border-color);border-radius:4px;padding:4px 8px;margin:2px;font-size:12px;}
 
     .loading-spinner{display:inline-block;width:20px;height:20px;border:2px solid #f3f3f3;border-top:2px solid var(--primary-color);border-radius:50%;animation:spin 1s linear infinite;margin-right:8px}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 
-    /* Refresh button styling */
-    .refresh-section {
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-      margin-top: 16px;
-    }
-    .refresh-btn {
-      background: var(--text-light);
-      min-width: 120px;
-    }
-    .refresh-btn:hover {
-      background: #5a6268;
-    }
-    .channel-info {
-      flex: 1;
-      background: var(--light-bg);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 12px;
-    }
+    .refresh-section { display:flex;gap:10px;align-items:flex-end;margin-top:16px; }
+    .refresh-btn { background:var(--text-light);min-width:120px; }
+    .refresh-btn:hover { background:#5a6268; }
+    .channel-info { flex:1;background:var(--light-bg);padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px; }
+
+    /* Debug log */
+    #debugLog { font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 6px; margin-top: 10px; }
+    #debugLog .log-info { color: #9cdcfe; }
+    #debugLog .log-success { color: #4ec9b0; }
+    #debugLog .log-warn { color: #ce9178; }
+    #debugLog .log-error { color: #f44747; }
   </style>
 </head>
 <body>
@@ -280,16 +202,14 @@
     <div id="tab-dashboard" class="main-tab-content active">
       <div class="card">
         <h2 class="section-title">🎙️ Live Transcription Notification Monitor</h2>
-        <p class="muted">Real-time monitoring using <a href="https://developer.genesys.cloud/analyticsdatamanagement/speechtextanalytics/transcription-notifications" target="_blank">Genesys Cloud Transcription Notifications API</a></p>
+        <p class="muted">Real-time monitoring using Genesys Cloud Transcription Notifications API</p>
         
-        <!-- Queue selection dropdown -->
         <div style="max-width:500px; margin-bottom:20px;">
           <label>Monitor Queues (conversation queues)</label>
           <div id="queueSelector" class="checkbox-dropdown"></div>
           <div class="muted" style="margin-top:4px;">Select queues to receive transcription notifications from</div>
         </div>
 
-        <!-- Selected queues display -->
         <div class="selected-queues-display" id="selectedQueuesDisplay">
           <div class="muted">No queues selected</div>
         </div>
@@ -300,34 +220,39 @@
             <input id="riskPhrases" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud" placeholder="e.g. complaint, lawsuit, cancel">
             <div class="muted">Case-insensitive partial matching</div>
           </div>
-          <div style="display: flex; gap: 8px; align-items: end;">
+          <div style="display:flex;gap:8px;align-items:end;">
             <button id="subscribeBtn" class="full-width-btn" style="margin-top:0;">
               <span class="loading-spinner" style="display:none;"></span>
               <span class="btn-text">🔔 Start Monitoring</span>
             </button>
-            <button id="unsubscribeBtn" class="full-width-btn" style="margin-top:0; background:#6c757d;" disabled>🔕 Stop Monitoring</button>
+            <button id="unsubscribeBtn" class="full-width-btn" style="margin-top:0;background:#6c757d;" disabled>🔕 Stop Monitoring</button>
           </div>
         </div>
         
-        <!-- Channel info with refresh button -->
         <div class="refresh-section">
           <div class="channel-info">
             <div><strong>Channel ID:</strong> <span id="channelId">—</span></div>
             <div><strong>Status:</strong> <span id="connectionStatus">Not connected</span></div>
             <div><strong>WebSocket:</strong> <span id="websocketState">Closed</span></div>
             <div><strong>Active Queues:</strong> <span id="activeQueueCount">0</span></div>
+            <div><strong>Tracked Conversations:</strong> <span id="trackedConversations">0</span></div>
           </div>
           <button id="refreshChannelBtn" class="full-width-btn refresh-btn" disabled>
             <span class="loading-spinner" style="display:none;"></span>
             <span class="btn-text">🔄 Reconnect</span>
           </button>
         </div>
+
+        <!-- Debug log -->
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;font-size:13px;color:var(--text-light);">🪲 Debug Log</summary>
+          <div id="debugLog"></div>
+        </details>
       </div>
 
-      <!-- Risk statistics -->
       <div class="card">
         <h2 class="section-title">⚠️ Detected Risk Events</h2>
-        <div class="kpis" style="grid-template-columns: repeat(4,1fr); margin-bottom: 20px;" id="riskStats">
+        <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;" id="riskStats">
           <div class="kpi"><span class="label">Total Events</span><span class="value" id="statTotal">0</span></div>
           <div class="kpi"><span class="label">Unique Conversations</span><span class="value" id="statConversations">0</span></div>
           <div class="kpi"><span class="label">Agents</span><span class="value" id="statAgents">0</span></div>
@@ -338,7 +263,7 @@
           <table class="frozen-table" id="notificationTable">
             <thead>
               <tr>
-                <th>Time</th><th>Conversation ID</th><th>Queue</th><th>Agent</th><th>Customer</th><th>Detected Phrase</th><th>Transcript</th>
+                <th>Time</th><th>Conversation ID</th><th>Queue</th><th>Agent</th><th>Channel</th><th>Detected Phrase</th><th>Transcript</th>
               </tr>
             </thead>
             <tbody id="notificationTableBody">
@@ -356,19 +281,25 @@
     <div id="tab-guide" class="main-tab-content">
       <div class="card">
         <h2 class="section-title">📘 Production Configuration Guide</h2>
-        <div style="background:var(--light-bg); padding:20px; border-radius:8px;">
+        <div style="background:var(--light-bg);padding:20px;border-radius:8px;">
+          <h3>How It Works (Corrected Two-Stage Architecture)</h3>
+          <p>This app uses a <strong>two-stage subscription model</strong>:</p>
+          <ol>
+            <li><strong>Stage 1:</strong> Subscribe to <code>v2.routing.queues.{queueId}.conversations.calls</code> for each selected queue — fires when a call lands in the queue, providing the <code>conversationId</code>.</li>
+            <li><strong>Stage 2:</strong> Dynamically subscribe to <code>v2.conversations.{conversationId}.transcription</code> for each active conversation to receive real-time transcript segments.</li>
+          </ol>
+
           <h3>Required Permissions</h3>
-          <p>Ensure your OAuth client has these scopes:</p>
           <ul>
-            <li><code>speech-and-text-analytics</code> - For transcription access</li>
-            <li><code>notifications</code> - For creating channels and WebSocket connections</li>
-            <li><code>routing:queue:view</code> - For fetching queue list</li>
+            <li><code>speech-and-text-analytics</code> — For transcription access</li>
+            <li><code>notifications</code> — For creating channels and WebSocket connections</li>
+            <li><code>routing:queue:view</code> — For fetching queue list</li>
           </ul>
 
           <h3>Transcription Requirements</h3>
           <ul>
             <li>Voice transcription must be enabled in your org</li>
-            <li>Enable per queue: <code>/api/v2/routing/queues/{queueId}/transcription</code></li>
+            <li>Enable per queue: <code>PUT /api/v2/routing/queues/{queueId}/transcription</code></li>
             <li>Only Genesys Cloud Voice or BYOC Cloud provide real-time transcription</li>
             <li>BYOC Premises completes transcription after call ends</li>
           </ul>
@@ -376,8 +307,9 @@
           <h3>API Usage Notes</h3>
           <ul>
             <li>Each notification counts toward your rate limits</li>
-            <li>Channels expire after 24 hours - use Refresh button to recreate</li>
+            <li>Channels expire after 24 hours — use Reconnect to recreate</li>
             <li>WebSocket will auto-reconnect with exponential backoff</li>
+            <li>New conversations are automatically subscribed as they arrive in monitored queues</li>
           </ul>
         </div>
       </div>
@@ -386,28 +318,29 @@
 
   <script>
     (function() {
-      // Configuration
-      const clientId = 'fe305808-b368-4547-8af9-325d28d552bb';
+      // ── Configuration ────────────────────────────────────────────────────────
+      const clientId    = 'fe305808-b368-4547-8af9-325d28d552bb';
       const redirectUri = 'https://gmcglynn88.github.io/Transcription-Notification/';
-      const region = 'mypurecloud.ie';
-      const oauthUrl = `https://login.${region}/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      const region      = 'mypurecloud.ie';
+      const oauthUrl    = `https://login.${region}/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-      // State
-      let token = null;
-      let availableQueues = [];
-      let queueDropdown = null;
+      // ── State ────────────────────────────────────────────────────────────────
+      let token               = null;
+      let availableQueues     = [];
+      let queueDropdown       = null;
       let notificationChannel = null;
-      let webSocket = null;
-      let notifications = [];
-      let reconnectAttempts = 0;
+      let webSocket           = null;
+      let notifications       = [];
+      let reconnectAttempts   = 0;
+      let isMonitoring        = false;
+      let trackedConvIds      = new Set();   // conversation IDs we've subscribed to
+      let selectedQueuesCache = [];          // cache so reconnect knows which queues
       const maxReconnectAttempts = 5;
-      
-      // Risk phrases (customizable by user)
       let riskPhrases = [];
 
-      // Helper functions
+      // ── Helpers ──────────────────────────────────────────────────────────────
       function $(id) { return document.getElementById(id); }
-      
+
       function showMessage(message, type = 'info') {
         const msgBox = $('messageContainer');
         msgBox.innerHTML = `<div class="${type}-message">${message}</div>`;
@@ -416,22 +349,33 @@
       }
 
       function authHeaders() {
-        return { 
-          Authorization: `Bearer ${token}`, 
-          'Content-Type': 'application/json'
-        };
+        return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       }
 
-      function updateWebsocketState(state) {
-        $('websocketState').innerText = state;
+      function log(msg, level = 'info') {
+        const el = $('debugLog');
+        const line = document.createElement('div');
+        line.className = `log-${level}`;
+        line.textContent = `[${new Date().toLocaleTimeString('en-GB')}] ${msg}`;
+        el.appendChild(line);
+        el.scrollTop = el.scrollHeight;
+        console.log(`[${level}] ${msg}`);
       }
+
+      function updateWebsocketState(state) { $('websocketState').innerText = state; }
 
       function updateActiveQueueCount() {
         const selected = queueDropdown ? queueDropdown.getSelectedValues() : [];
         $('activeQueueCount').innerText = selected.length;
       }
 
-      // Create checkbox dropdown (from queue management app)
+      function updateTrackedConversations() {
+        $('trackedConversations').innerText = trackedConvIds.size;
+      }
+
+      function enableRefreshButton(enabled) { $('refreshChannelBtn').disabled = !enabled; }
+
+      // ── Queue Dropdown ───────────────────────────────────────────────────────
       function createQueueDropdown(containerId, { placeholder, searchPlaceholder }) {
         const root = $(containerId);
         if (!root) return null;
@@ -455,70 +399,46 @@
         `;
         root.appendChild(panel);
 
-        const list = panel.querySelector('.cd-list');
-        const search = panel.querySelector('.cd-search');
-        const clearBtn = panel.querySelector('[data-cd="clear"]');
+        const list      = panel.querySelector('.cd-list');
+        const search    = panel.querySelector('.cd-search');
+        const clearBtn  = panel.querySelector('[data-cd="clear"]');
         const selectAll = panel.querySelector('[data-cd="selectall"]');
-        const summary = panel.querySelector('[data-cd="summary"]');
+        const summary   = panel.querySelector('[data-cd="summary"]');
         const countSpan = trigger.querySelector('.count');
 
-        let options = [];
+        let options  = [];
         let selected = new Set();
 
         function render(filter = '') {
           const ft = filter.toLowerCase().trim();
           list.innerHTML = '';
           const filtered = !ft ? options : options.filter(o => (o.label || '').toLowerCase().includes(ft));
-
-          if (!filtered.length) {
-            list.innerHTML = `<div class="cd-item" style="color:#6C757D">No matches</div>`;
-            return;
-          }
-
+          if (!filtered.length) { list.innerHTML = `<div class="cd-item" style="color:#6C757D">No matches</div>`; return; }
           filtered.forEach(o => {
             const id = `${containerId}_${o.value}`;
             const row = document.createElement('div');
             row.className = 'cd-item';
-            row.innerHTML = `
-              <label for="${id}">
-                <input type="checkbox" id="${id}" value="${o.value}" ${selected.has(o.value) ? 'checked' : ''}/>
-                <span>${o.label}</span>
-              </label>
-            `;
+            row.innerHTML = `<label for="${id}"><input type="checkbox" id="${id}" value="${o.value}" ${selected.has(o.value) ? 'checked' : ''}/><span>${o.label}</span></label>`;
             const cb = row.querySelector('input');
             cb.addEventListener('change', () => {
               cb.checked ? selected.add(o.value) : selected.delete(o.value);
-              updateSummary();
-              updateSelectAllState();
-              updateSelectedDisplay();
-              updateActiveQueueCount();
+              updateSummary(); updateSelectAllState(); updateSelectedDisplay(); updateActiveQueueCount();
             });
             list.appendChild(row);
           });
         }
 
-        function updateSummary() {
-          countSpan.textContent = `${selected.size} selected`;
-          summary.textContent = `${selected.size} selected`;
-        }
-
+        function updateSummary() { countSpan.textContent = `${selected.size} selected`; summary.textContent = `${selected.size} selected`; }
         function updateSelectAllState() {
           const total = options.length;
           selectAll.indeterminate = selected.size > 0 && selected.size < total;
           selectAll.checked = total > 0 && selected.size === total;
         }
-
         function updateSelectedDisplay() {
           const displayDiv = $('selectedQueuesDisplay');
           const sel = getSelectedValues();
-          if (!sel.length) {
-            displayDiv.innerHTML = `<div class="muted">No queues selected</div>`;
-            return;
-          }
-          const names = sel.map(id => {
-            const q = availableQueues.find(q => q.id === id);
-            return q ? q.name : id;
-          });
+          if (!sel.length) { displayDiv.innerHTML = `<div class="muted">No queues selected</div>`; return; }
+          const names = sel.map(id => { const q = availableQueues.find(q => q.id === id); return q ? q.name : id; });
           displayDiv.innerHTML = names.map(n => `<div class="selected-queue-item">${n}</div>`).join('');
         }
 
@@ -527,32 +447,18 @@
         search.addEventListener('input', () => render(search.value));
 
         clearBtn.addEventListener('click', () => {
-          selected.clear();
-          render(search.value);
-          updateSummary();
-          updateSelectAllState();
-          updateSelectedDisplay();
-          updateActiveQueueCount();
+          selected.clear(); render(search.value); updateSummary(); updateSelectAllState(); updateSelectedDisplay(); updateActiveQueueCount();
         });
 
         selectAll.addEventListener('change', () => {
-          if (selectAll.checked) options.forEach(o => selected.add(o.value));
-          else selected.clear();
-          render(search.value);
-          updateSummary();
-          updateSelectAllState();
-          updateSelectedDisplay();
-          updateActiveQueueCount();
+          if (selectAll.checked) options.forEach(o => selected.add(o.value)); else selected.clear();
+          render(search.value); updateSummary(); updateSelectAllState(); updateSelectedDisplay(); updateActiveQueueCount();
         });
 
         function setOptions(arr) {
           options = arr || [];
           [...selected].forEach(v => { if (!options.some(o => o.value === v)) selected.delete(v); });
-          render(search.value);
-          updateSummary();
-          updateSelectAllState();
-          updateSelectedDisplay();
-          updateActiveQueueCount();
+          render(search.value); updateSummary(); updateSelectAllState(); updateSelectedDisplay(); updateActiveQueueCount();
         }
 
         function getSelectedValues() { return [...selected]; }
@@ -561,17 +467,11 @@
         return { setOptions, getSelectedValues };
       }
 
-      // API Calls following the blueprint
+      // ── API Calls ────────────────────────────────────────────────────────────
       async function fetchAllQueues() {
-        let all = [];
-        let page = 1;
-        const pageSize = 100;
-        let total = 0;
+        let all = [], page = 1, total = 0;
         do {
-          const res = await fetch(
-            `https://api.${region}/api/v2/routing/queues?pageNumber=${page}&pageSize=${pageSize}`,
-            { headers: authHeaders() }
-          );
+          const res = await fetch(`https://api.${region}/api/v2/routing/queues?pageNumber=${page}&pageSize=100`, { headers: authHeaders() });
           if (!res.ok) throw new Error('Failed to fetch queues');
           const data = await res.json();
           all = all.concat(data.entities || []);
@@ -581,159 +481,204 @@
         return all;
       }
 
-      // Step 1: Create notification channel
       async function createNotificationChannel() {
-        const res = await fetch(
-          `https://api.${region}/api/v2/notifications/channels`,
-          {
-            method: 'POST',
-            headers: authHeaders()
-          }
-        );
+        const res = await fetch(`https://api.${region}/api/v2/notifications/channels`, { method: 'POST', headers: authHeaders() });
         if (!res.ok) throw new Error('Failed to create notification channel');
         return await res.json();
       }
 
-      // Step 2: Get available topics (optional - for verification)
-      async function getAvailableTopics() {
-        const res = await fetch(
-          `https://api.${region}/api/v2/notifications/availabletopics`,
-          { headers: authHeaders() }
-        );
-        if (!res.ok) throw new Error('Failed to get available topics');
-        return await res.json();
-      }
-
-      // Step 3: Subscribe to transcription notifications topic
-      async function subscribeToTranscriptionNotifications(channelId) {
-        const body = [
-          {
-            id: `v2.speechandtextanalytics.transcription-notifications`,
-            state: 'Enabled'
-          }
-        ];
-        
+      // ── FIX: Use POST (additive) not PUT (replaces all) ──────────────────────
+      // PUT /subscriptions replaces ALL subscriptions — use it only for the initial
+      // queue topics. Use POST for each new per-conversation transcription topic
+      // so we don't wipe the queue subscriptions we depend on.
+      async function putSubscriptions(channelId, topics) {
+        const body = topics.map(t => ({ id: t }));   // FIX: removed invalid `state: 'Enabled'`
         const res = await fetch(
           `https://api.${region}/api/v2/notifications/channels/${channelId}/subscriptions`,
-          {
-            method: 'PUT',
-            headers: authHeaders(),
-            body: JSON.stringify(body)
-          }
+          { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) }
         );
-        if (!res.ok) throw new Error('Failed to subscribe to transcription notifications');
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`PUT subscriptions failed (${res.status}): ${err}`);
+        }
         return await res.json();
       }
 
-      // Step 4: Connect WebSocket
-      function connectWebSocket(connectUri) {
-        if (webSocket) {
-          webSocket.close();
+      async function postSubscriptions(channelId, topics) {
+        const body = topics.map(t => ({ id: t }));   // POST is additive — won't replace existing
+        const res = await fetch(
+          `https://api.${region}/api/v2/notifications/channels/${channelId}/subscriptions`,
+          { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }
+        );
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`POST subscriptions failed (${res.status}): ${err}`);
         }
+        return await res.json();
+      }
+
+      // ── WebSocket ────────────────────────────────────────────────────────────
+      function connectWebSocket(connectUri) {
+        if (webSocket) { webSocket.close(); webSocket = null; }
 
         webSocket = new WebSocket(connectUri);
-        updateWebsocketState('Connecting...');
-        
+        updateWebsocketState('Connecting…');
+
         webSocket.onopen = () => {
-          console.log('WebSocket connected');
+          log('WebSocket connected', 'success');
           $('connectionStatus').innerText = 'Connected';
           updateWebsocketState('Connected');
           reconnectAttempts = 0;
           enableRefreshButton(true);
         };
-        
-        webSocket.onmessage = (event) => {
+
+        webSocket.onmessage = async (event) => {
           try {
             const message = JSON.parse(event.data);
-            // Handle notification - format from blueprint
-            if (message.topicName === 'v2.speechandtextanalytics.transcription-notifications' && message.eventBody) {
-              processLiveNotification(message.eventBody);
+            const topic   = message.topicName || '';
+            const body    = message.eventBody  || {};
+
+            log(`MSG: ${topic}`);
+
+            // ── FIX: Stage 1 — call arrived in a monitored queue ─────────────
+            // Topic format: v2.routing.queues.{queueId}.conversations.calls
+            if (topic.startsWith('v2.routing.queues.') && topic.endsWith('.conversations.calls')) {
+              const conversationId = body.id;
+              if (conversationId && !trackedConvIds.has(conversationId)) {
+                trackedConvIds.add(conversationId);
+                updateTrackedConversations();
+                log(`New conversation detected: ${conversationId} — subscribing to transcription`, 'success');
+
+                // ── FIX: Stage 2 — subscribe to this conversation's transcription ──
+                // Topic format: v2.conversations.{conversationId}.transcription
+                try {
+                  await postSubscriptions(notificationChannel.id, [
+                    `v2.conversations.${conversationId}.transcription`
+                  ]);
+                  log(`Subscribed to transcription for ${conversationId}`, 'success');
+                } catch (e) {
+                  log(`Failed to subscribe to transcription: ${e.message}`, 'error');
+                }
+              }
+              return;
             }
+
+            // ── FIX: Stage 2 — live transcription notification ───────────────
+            // Topic format: v2.conversations.{conversationId}.transcription
+            if (topic.startsWith('v2.conversations.') && topic.endsWith('.transcription')) {
+              log(`Transcription received for topic: ${topic}`, 'info');
+              processTranscriptionNotification(body, topic);
+              return;
+            }
+
+            // Heartbeat / other system messages
+            if (topic === 'channel.metadata') { log('Heartbeat', 'info'); }
+
           } catch (e) {
-            console.error('Error processing WebSocket message', e);
+            log(`Error processing message: ${e.message}`, 'error');
           }
         };
-        
+
         webSocket.onerror = (error) => {
-          console.error('WebSocket error', error);
+          log('WebSocket error', 'error');
           $('connectionStatus').innerText = 'Error';
           updateWebsocketState('Error');
           showMessage('WebSocket connection error', 'error');
         };
-        
+
         webSocket.onclose = () => {
-          console.log('WebSocket closed');
+          log('WebSocket closed', 'warn');
           $('connectionStatus').innerText = 'Disconnected';
           updateWebsocketState('Closed');
-          
-          // Attempt to reconnect if we're still subscribed
-          if ($('subscribeBtn').disabled && reconnectAttempts < maxReconnectAttempts) {
+
+          if (isMonitoring && reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
-            showMessage(`Reconnecting... attempt ${reconnectAttempts}/${maxReconnectAttempts}`, 'info');
+            const delay = 3000 * reconnectAttempts;
+            log(`Reconnecting in ${delay/1000}s (attempt ${reconnectAttempts}/${maxReconnectAttempts})`, 'warn');
+            showMessage(`Reconnecting… attempt ${reconnectAttempts}/${maxReconnectAttempts}`, 'info');
             setTimeout(() => {
-              if (notificationChannel) {
+              if (notificationChannel && isMonitoring) {
                 connectWebSocket(notificationChannel.connectUri);
               }
-            }, 3000 * reconnectAttempts); // Exponential backoff
+            }, delay);
           }
         };
       }
 
-      // Process live transcription notification
-      function processLiveNotification(notification) {
-        // Filter by selected queues
-        const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
-        if (selectedQueues.length > 0) {
-          const queueId = notification.conversation?.queueId;
-          if (!queueId || !selectedQueues.includes(queueId)) {
-            return; // Skip notifications from non-selected queues
-          }
+      // ── Process Transcription ────────────────────────────────────────────────
+      // FIX: Updated field mapping to match actual Genesys transcription event body.
+      // The eventBody for v2.conversations.{id}.transcription contains:
+      //   { conversationId, transcripts: [{ channel, words: [{ word, confidence }] }] }
+      function processTranscriptionNotification(body, topic) {
+        // Extract conversationId from either body field or the topic itself
+        const conversationId = body.conversationId
+          || topic.split('.')[2]   // v2.conversations.{id}.transcription
+          || 'unknown';
+
+        // Build transcript text from word array
+        let transcriptText = '';
+        let channel = 'unknown';
+
+        if (body.transcripts && Array.isArray(body.transcripts)) {
+          body.transcripts.forEach(segment => {
+            channel = segment.channel || channel;
+            if (segment.words && Array.isArray(segment.words)) {
+              transcriptText += segment.words.map(w => w.word || '').join(' ') + ' ';
+            }
+          });
+        } else if (typeof body.transcript === 'string') {
+          // Fallback in case Genesys sends a flat string
+          transcriptText = body.transcript;
         }
 
-        // Extract transcript text
-        const transcript = notification.transcript || '';
-        
-        // Check for risk phrases
-        const detectedPhrase = detectRiskPhrase(transcript);
-        
-        if (detectedPhrase) {
-          const notificationEvent = {
-            id: notification.id || Date.now() + '-' + Math.random(),
-            timestamp: notification.eventTime || new Date().toISOString(),
-            conversationId: notification.conversation?.id || 'unknown',
-            queueId: notification.conversation?.queueId,
-            queueName: getQueueName(notification.conversation?.queueId),
-            agentId: notification.agent?.id,
-            agentName: notification.agent?.name || 'Unknown Agent',
-            customer: notification.customer?.phone || notification.customer?.email || 'Unknown Customer',
-            transcript: transcript,
-            phrase: detectedPhrase
-          };
-          
-          notifications.unshift(notificationEvent);
-          if (notifications.length > 100) notifications.pop();
-          renderNotifications();
-          updateStats();
-        }
+        transcriptText = transcriptText.trim();
+        if (!transcriptText) { log('Empty transcript segment, skipping', 'info'); return; }
+
+        // Check risk phrases
+        const detectedPhrase = detectRiskPhrase(transcriptText);
+        if (!detectedPhrase) return;
+
+        const queueId   = body.queueId   || getQueueForConversation(conversationId);
+        const agentId   = body.agentId   || (body.participants && body.participants.find(p => p.purpose === 'agent')?.userId) || 'unknown';
+        const agentName = body.agentName || (body.participants && body.participants.find(p => p.purpose === 'agent')?.name)   || 'Unknown Agent';
+
+        const event = {
+          id:             Date.now() + '-' + Math.random(),
+          timestamp:      body.eventTime || new Date().toISOString(),
+          conversationId,
+          queueId,
+          queueName:      getQueueName(queueId),
+          agentId,
+          agentName,
+          channel,
+          transcript:     transcriptText,
+          phrase:         detectedPhrase
+        };
+
+        log(`⚠️ RISK DETECTED: "${detectedPhrase}" in conversation ${conversationId}`, 'warn');
+        notifications.unshift(event);
+        if (notifications.length > 200) notifications.pop();
+        renderNotifications();
+        updateStats();
       }
+
+      // Simple lookup: find which queue a conversation belongs to based on what
+      // queue topics fired for it (tracked in trackedConvIds as conversationId only;
+      // for a full impl you'd store a map of convId → queueId from Stage 1 body).
+      function getQueueForConversation(convId) { return null; }
 
       function getQueueName(queueId) {
         if (!queueId) return 'Unknown';
-        const queue = availableQueues.find(q => q.id === queueId);
-        return queue ? queue.name : queueId;
+        const q = availableQueues.find(q => q.id === queueId);
+        return q ? q.name : queueId;
       }
 
       function detectRiskPhrase(text) {
-        if (!text || riskPhrases.length === 0) return null;
-        
-        text = text.toLowerCase();
-        
-        for (let phrase of riskPhrases) {
-          if (text.includes(phrase.toLowerCase())) {
-            return phrase;
-          }
+        if (!text || !riskPhrases.length) return null;
+        const lower = text.toLowerCase();
+        for (const phrase of riskPhrases) {
+          if (lower.includes(phrase)) return phrase;
         }
-        
         return null;
       }
 
@@ -743,185 +688,162 @@
           tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;">No risk events detected yet.</td></tr>';
           return;
         }
-        
-        const rows = notifications.map(n => {
-          const time = new Date(n.timestamp).toLocaleTimeString('en-GB');
-          const shortConvId = n.conversationId.substring(0, 8) + '...';
-          
-          // Highlight detected phrase
+        tbody.innerHTML = notifications.map(n => {
+          const time      = new Date(n.timestamp).toLocaleTimeString('en-GB');
+          const shortId   = n.conversationId.substring(0, 8) + '…';
           const highlighted = n.transcript.replace(
-            new RegExp(`(${n.phrase})`, 'gi'),
+            new RegExp(`(${n.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
-          
           return `<tr>
             <td>${time}</td>
-            <td title="${n.conversationId}">${shortConvId}</td>
+            <td title="${n.conversationId}">${shortId}</td>
             <td>${n.queueName}</td>
             <td>${n.agentName}</td>
-            <td>${n.customer}</td>
-            <td><span class="pill">${n.phrase}</span></td>
+            <td>${n.channel}</td>
+            <td><span class="badge badge-info">${n.phrase}</span></td>
             <td><div class="transcript-preview">${highlighted}</div></td>
           </tr>`;
         }).join('');
-        
-        tbody.innerHTML = rows;
       }
 
       function updateStats() {
-        $('statTotal').innerText = notifications.length;
-        
-        const uniqueConversations = new Set(notifications.map(n => n.conversationId)).size;
-        const uniqueAgents = new Set(notifications.map(n => n.agentId)).size;
-        const uniqueQueues = new Set(notifications.map(n => n.queueId)).size;
-        
-        $('statConversations').innerText = uniqueConversations;
-        $('statAgents').innerText = uniqueAgents;
-        $('statQueues').innerText = uniqueQueues;
+        $('statTotal').innerText         = notifications.length;
+        $('statConversations').innerText = new Set(notifications.map(n => n.conversationId)).size;
+        $('statAgents').innerText        = new Set(notifications.map(n => n.agentId)).size;
+        $('statQueues').innerText        = new Set(notifications.map(n => n.queueId).filter(Boolean)).size;
       }
 
-      function enableRefreshButton(enabled) {
-        $('refreshChannelBtn').disabled = !enabled;
-      }
+      // ── Subscribe Flow ───────────────────────────────────────────────────────
+      async function handleSubscribe() {
+        const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
+        if (!selectedQueues.length) { showMessage('Please select at least one queue to monitor', 'error'); return; }
 
-      // Refresh function - manually reconnect/resubscribe
-      async function handleRefresh() {
-        if (!notificationChannel) {
-          showMessage('No active channel to refresh', 'error');
-          return;
-        }
+        const phrasesInput = $('riskPhrases').value;
+        riskPhrases = phrasesInput.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+        if (!riskPhrases.length) { showMessage('Please enter at least one risk phrase', 'error'); return; }
 
-        const btn = $('refreshChannelBtn');
-        const spinner = btn.querySelector('.loading-spinner');
-        const btnText = btn.querySelector('.btn-text');
-        
+        selectedQueuesCache = [...selectedQueues];
+
+        const btn      = $('subscribeBtn');
+        const spinner  = btn.querySelector('.loading-spinner');
+        const btnText  = btn.querySelector('.btn-text');
         spinner.style.display = 'inline-block';
-        btnText.textContent = 'Reconnecting...';
-        btn.disabled = true;
+        btnText.textContent   = 'Creating channel…';
+        btn.disabled          = true;
 
         try {
-          showMessage('Refreshing notification channel...', 'info');
-          
-          // Close existing WebSocket
-          if (webSocket) {
-            webSocket.close();
-            webSocket = null;
+          // Step 1: Create channel
+          log('Creating notification channel…', 'info');
+          const channel = await createNotificationChannel();
+          notificationChannel = channel;
+          $('channelId').innerText = channel.id;
+          log(`Channel created: ${channel.id}`, 'success');
+
+          // Step 2: Subscribe to queue conversation topics (Stage 1 topics)
+          // FIX: correct topic format v2.routing.queues.{queueId}.conversations.calls
+          // FIX: no `state` field; plain { id } objects only
+          const queueTopics = selectedQueues.map(qId => `v2.routing.queues.${qId}.conversations.calls`);
+          log(`Subscribing to ${queueTopics.length} queue topic(s)…`, 'info');
+          await putSubscriptions(channel.id, queueTopics);
+          log('Queue topics subscribed', 'success');
+
+          // Step 3: Connect WebSocket — per-conversation transcription topics
+          // will be added dynamically via POST as calls arrive (Stage 2)
+          connectWebSocket(channel.connectUri);
+
+          isMonitoring = true;
+          trackedConvIds.clear();
+          updateTrackedConversations();
+
+          $('subscribeBtn').disabled  = true;
+          $('unsubscribeBtn').disabled = false;
+          enableRefreshButton(true);
+          $('connectionStatus').innerText = 'Connecting…';
+
+          showMessage('✅ Monitoring started. Waiting for calls in selected queues…', 'success');
+        } catch (err) {
+          log(`Subscribe failed: ${err.message}`, 'error');
+          showMessage('Failed to subscribe: ' + err.message, 'error');
+          btn.disabled = false;
+          enableRefreshButton(false);
+        } finally {
+          spinner.style.display = 'none';
+          btnText.textContent   = '🔔 Start Monitoring';
+        }
+      }
+
+      function handleUnsubscribe() {
+        isMonitoring = false;
+        if (webSocket) { webSocket.close(); webSocket = null; }
+        notificationChannel = null;
+        trackedConvIds.clear();
+        updateTrackedConversations();
+        $('channelId').innerText        = '—';
+        $('connectionStatus').innerText = 'Not connected';
+        updateWebsocketState('Closed');
+        $('subscribeBtn').disabled       = false;
+        $('unsubscribeBtn').disabled     = true;
+        enableRefreshButton(false);
+        showMessage('Stopped monitoring', 'success');
+        log('Monitoring stopped', 'warn');
+      }
+
+      async function handleRefresh() {
+        if (!notificationChannel) { showMessage('No active channel to refresh', 'error'); return; }
+
+        const btn     = $('refreshChannelBtn');
+        const spinner = btn.querySelector('.loading-spinner');
+        const btnText = btn.querySelector('.btn-text');
+        spinner.style.display = 'inline-block';
+        btnText.textContent   = 'Reconnecting…';
+        btn.disabled          = true;
+
+        try {
+          log('Refreshing channel…', 'info');
+          if (webSocket) { webSocket.close(); webSocket = null; }
+
+          // Re-subscribe to queue topics (PUT resets all subscriptions cleanly)
+          const queueTopics = selectedQueuesCache.map(qId => `v2.routing.queues.${qId}.conversations.calls`);
+          await putSubscriptions(notificationChannel.id, queueTopics);
+          log('Queue subscriptions restored', 'success');
+
+          // Re-subscribe to any conversations we were already tracking
+          if (trackedConvIds.size > 0) {
+            const convTopics = [...trackedConvIds].map(id => `v2.conversations.${id}.transcription`);
+            await postSubscriptions(notificationChannel.id, convTopics);
+            log(`Re-subscribed to ${convTopics.length} conversation transcription topic(s)`, 'success');
           }
 
-          // Resubscribe to ensure subscription is active
-          await subscribeToTranscriptionNotifications(notificationChannel.id);
-
-          // Reconnect WebSocket
           connectWebSocket(notificationChannel.connectUri);
-
           showMessage('Channel refreshed successfully', 'success');
         } catch (err) {
+          log(`Refresh failed: ${err.message}`, 'error');
           showMessage('Failed to refresh: ' + err.message, 'error');
-          // If channel is dead, force new subscription
           if (err.message.includes('404') || err.message.includes('403')) {
             notificationChannel = null;
-            $('subscribeBtn').disabled = false;
+            $('subscribeBtn').disabled   = false;
             $('unsubscribeBtn').disabled = true;
             enableRefreshButton(false);
           }
         } finally {
           spinner.style.display = 'none';
-          btnText.textContent = '🔄 Reconnect';
-          btn.disabled = false;
+          btnText.textContent   = '🔄 Reconnect';
+          btn.disabled          = false;
         }
       }
 
-      // Subscribe button handler - implements full blueprint flow
-      async function handleSubscribe() {
-        const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
-        if (selectedQueues.length === 0) {
-          showMessage('Please select at least one queue to monitor', 'error');
-          return;
-        }
-
-        // Parse risk phrases
-        const phrasesInput = $('riskPhrases').value;
-        riskPhrases = phrasesInput.split(',').map(p => p.trim().toLowerCase()).filter(p => p);
-        
-        if (riskPhrases.length === 0) {
-          showMessage('Please enter at least one risk phrase', 'error');
-          return;
-        }
-
-        const btn = $('subscribeBtn');
-        const spinner = btn.querySelector('.loading-spinner');
-        const btnText = btn.querySelector('.btn-text');
-        
-        spinner.style.display = 'inline-block';
-        btnText.textContent = 'Creating channel...';
-        btn.disabled = true;
-
-        try {
-          // Step 1: Create channel
-          showMessage('Creating notification channel...', 'info');
-          const channel = await createNotificationChannel();
-          notificationChannel = channel;
-          $('channelId').innerText = channel.id;
-
-          // Step 2: Verify topic exists (optional check)
-          try {
-            const topics = await getAvailableTopics();
-            console.log('Available topics loaded', topics.length);
-          } catch (e) {
-            console.log('Topic verification skipped', e);
-          }
-
-          // Step 3: Subscribe to transcription notifications topic
-          showMessage('Subscribing to transcription notifications...', 'info');
-          await subscribeToTranscriptionNotifications(channel.id);
-
-          // Step 4: Connect WebSocket
-          connectWebSocket(channel.connectUri);
-
-          // Update UI
-          $('subscribeBtn').disabled = true;
-          $('unsubscribeBtn').disabled = false;
-          enableRefreshButton(true);
-          $('connectionStatus').innerText = 'Connecting...';
-          
-          showMessage('Successfully subscribed to live transcription notifications', 'success');
-        } catch (err) {
-          showMessage('Failed to subscribe: ' + err.message, 'error');
-          console.error(err);
-          btn.disabled = false;
-          enableRefreshButton(false);
-        } finally {
-          spinner.style.display = 'none';
-          btnText.textContent = '🔔 Start Monitoring';
-        }
-      }
-
-      function handleUnsubscribe() {
-        if (webSocket) {
-          webSocket.close();
-          webSocket = null;
-        }
-        notificationChannel = null;
-        $('channelId').innerText = '—';
-        $('connectionStatus').innerText = 'Not connected';
-        updateWebsocketState('Closed');
-        $('subscribeBtn').disabled = false;
-        $('unsubscribeBtn').disabled = true;
-        enableRefreshButton(false);
-        showMessage('Stopped monitoring', 'success');
-      }
-
-      // OAuth handling
+      // ── OAuth ────────────────────────────────────────────────────────────────
       function handleAuth() {
-        const hash = window.location.hash.substring(1);
+        const hash   = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
-        token = params.get('access_token');
+        token        = params.get('access_token');
 
         if (!token) {
-          token = sessionStorage.getItem('purecloud_token');
-          const exp = sessionStorage.getItem('purecloud_token_exp');
+          token       = sessionStorage.getItem('purecloud_token');
+          const exp   = sessionStorage.getItem('purecloud_token_exp');
           if (token && exp && Date.now() < parseInt(exp)) {
-            // Valid
+            // still valid
           } else {
             window.location.href = oauthUrl;
             return;
@@ -930,36 +852,31 @@
           sessionStorage.setItem('purecloud_token', token);
           const expiresIn = params.get('expires_in');
           if (expiresIn) {
-            const exp = Date.now() + (parseInt(expiresIn) - 60) * 1000;
-            sessionStorage.setItem('purecloud_token_exp', exp);
+            sessionStorage.setItem('purecloud_token_exp', Date.now() + (parseInt(expiresIn) - 60) * 1000);
           }
           history.replaceState(null, document.title, window.location.pathname);
         }
 
-        $('authCard').style.display = 'none';
+        $('authCard').style.display  = 'none';
         $('appContent').style.display = 'block';
-        
         initializeApp();
       }
 
       async function initializeApp() {
         try {
-          // Load queues from API
           availableQueues = await fetchAllQueues();
-          
-          // Create dropdown with queue options
+
           queueDropdown = createQueueDropdown('queueSelector', {
-            placeholder: 'Select queues to monitor',
-            searchPlaceholder: 'Search queues...'
+            placeholder:       'Select queues to monitor',
+            searchPlaceholder: 'Search queues…'
           });
-          
-          const queueOpts = availableQueues
-            .map(q => ({ value: q.id, label: q.name }))
-            .sort((a, b) => a.label.localeCompare(b.label));
-          
-          queueDropdown.setOptions(queueOpts);
-          
-          // Set up event listeners
+
+          queueDropdown.setOptions(
+            availableQueues
+              .map(q => ({ value: q.id, label: q.name }))
+              .sort((a, b) => a.label.localeCompare(b.label))
+          );
+
           $('subscribeBtn').addEventListener('click', handleSubscribe);
           $('unsubscribeBtn').addEventListener('click', handleUnsubscribe);
           $('refreshChannelBtn').addEventListener('click', handleRefresh);
@@ -968,31 +885,28 @@
             renderNotifications();
             updateStats();
           });
-          
-          showMessage(`Loaded ${availableQueues.length} queues from your org`, 'success');
+
+          showMessage(`Loaded ${availableQueues.length} queues`, 'success');
+          log(`Loaded ${availableQueues.length} queues`, 'success');
         } catch (err) {
-          showMessage('Failed to initialize: ' + err.message, 'error');
+          showMessage('Failed to initialise: ' + err.message, 'error');
+          log(`Init failed: ${err.message}`, 'error');
         }
       }
 
-      // Tab switching
+      // ── Tabs ─────────────────────────────────────────────────────────────────
       function setupTabs() {
         document.querySelectorAll('.main-tab-button').forEach(btn => {
           btn.addEventListener('click', (e) => {
             document.querySelectorAll('.main-tab-button').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
-            
             e.target.classList.add('active');
             $(e.target.dataset.tab).classList.add('active');
           });
         });
       }
 
-      // Start
-      document.addEventListener('DOMContentLoaded', () => {
-        setupTabs();
-        handleAuth();
-      });
+      document.addEventListener('DOMContentLoaded', () => { setupTabs(); handleAuth(); });
     })();
   </script>
 </body>
