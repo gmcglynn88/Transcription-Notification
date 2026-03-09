@@ -171,6 +171,35 @@
     .refresh-btn:hover { background:#5a6268; }
     .channel-info { flex:1;background:var(--light-bg);padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px; }
 
+    /* Phrase list */
+    .phrase-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+    .phrase-item:hover { background: var(--light-bg); }
+    .phrase-item .phrase-text {
+      flex: 1;
+      font-size: 14px;
+      font-family: monospace;
+    }
+    .phrase-item .phrase-delete {
+      background: transparent;
+      border: none;
+      color: var(--bad);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .phrase-item .phrase-delete:hover { background: #fee2e2; }
+    .phrase-empty { color: var(--text-light); font-size: 13px; padding: 16px; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px; }
+
     /* Debug log */
     #debugLog { font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 6px; margin-top: 10px; }
     #debugLog .log-info { color: #9cdcfe; }
@@ -196,6 +225,7 @@
 
     <div class="main-tab-container">
       <button class="main-tab-button active" data-tab="tab-dashboard">Live Transcription Monitor</button>
+      <button class="main-tab-button" data-tab="tab-phrases">⚠️ Risk Phrases</button>
       <button class="main-tab-button" data-tab="tab-guide">Configuration Guide</button>
     </div>
 
@@ -215,11 +245,6 @@
         </div>
 
         <div class="controls">
-          <div style="flex:2;">
-            <label for="riskPhrases">Risk phrases to detect (comma separated)</label>
-            <input id="riskPhrases" type="text" value="complaint, lawsuit, cancel, refund, chargeback, supervisor, escalate, terminate, breach, fraud" placeholder="e.g. complaint, lawsuit, cancel">
-            <div class="muted">Case-insensitive partial matching</div>
-          </div>
           <div style="display:flex;gap:8px;align-items:end;">
             <button id="subscribeBtn" class="full-width-btn" style="margin-top:0;">
               <span class="loading-spinner" style="display:none;"></span>
@@ -285,6 +310,37 @@
       </div>
     </div>
 
+    <div id="tab-phrases" class="main-tab-content">
+      <div class="card">
+        <h2 class="section-title">⚠️ Risk Phrase Manager</h2>
+        <p class="muted">Phrases are matched case-insensitively anywhere in the transcript. Changes take effect immediately — no need to restart monitoring.</p>
+
+        <!-- Add new phrase -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;margin-top:16px;align-items:flex-end;">
+          <div style="flex:1;">
+            <label for="newPhraseInput">Add a phrase</label>
+            <input id="newPhraseInput" type="text" placeholder="e.g. speak to a manager" style="width:100%;box-sizing:border-box;">
+          </div>
+          <button id="addPhraseBtn" style="padding:10px 20px;white-space:nowrap;">+ Add Phrase</button>
+        </div>
+
+        <!-- Phrase list -->
+        <div id="phraseList" style="display:flex;flex-direction:column;gap:8px;"></div>
+
+        <!-- Bulk import -->
+        <details style="margin-top:24px;">
+          <summary style="cursor:pointer;font-size:13px;color:var(--text-light);margin-bottom:8px;">📋 Bulk import (paste one phrase per line)</summary>
+          <textarea id="bulkPhraseInput" rows="5" placeholder="complaint&#10;lawsuit&#10;cancel&#10;refund&#10;chargeback" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:13px;margin-top:8px;"></textarea>
+          <button id="bulkImportBtn" style="margin-top:8px;">Import Phrases</button>
+        </details>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-color);display:flex;gap:10px;align-items:center;">
+          <span class="muted" id="phraseCount">0 phrases configured</span>
+          <button id="clearPhrasesBtn" style="background:var(--text-light);margin-left:auto;padding:8px 14px;font-size:13px;">Clear All</button>
+        </div>
+      </div>
+    </div>
+
     <div id="tab-guide" class="main-tab-content">
       <div class="card">
         <h2 class="section-title">📘 Production Configuration Guide</h2>
@@ -345,7 +401,50 @@
       let convParticipantMap  = {};          // conversationId → { agentName, agentId, customer } lookup
       let selectedQueuesCache = [];          // cache so reconnect knows which queues
       const maxReconnectAttempts = 5;
-      let riskPhrases = [];
+
+      // Default phrases — displayed in the Risk Phrases tab as individual entries
+      let riskPhrases = [
+        'complaint', 'lawsuit', 'cancel', 'refund', 'chargeback',
+        'supervisor', 'escalate', 'terminate', 'breach', 'fraud'
+      ];
+
+      // ── Phrase Manager ────────────────────────────────────────────────────────
+      function renderPhraseList() {
+        const list = $('phraseList');
+        $('phraseCount').textContent = `${riskPhrases.length} phrase${riskPhrases.length !== 1 ? 's' : ''} configured`;
+
+        if (!riskPhrases.length) {
+          list.innerHTML = '<div class="phrase-empty">No phrases configured. Add one above or use bulk import.</div>';
+          return;
+        }
+
+        list.innerHTML = riskPhrases.map((phrase, i) => `
+          <div class="phrase-item">
+            <span class="phrase-text">${escapeHtml(phrase)}</span>
+            <button class="phrase-delete" data-index="${i}" title="Remove phrase">×</button>
+          </div>
+        `).join('');
+
+        list.querySelectorAll('.phrase-delete').forEach(btn => {
+          btn.addEventListener('click', () => {
+            riskPhrases.splice(parseInt(btn.dataset.index), 1);
+            renderPhraseList();
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      function addPhrase(raw) {
+        const phrase = raw.trim().toLowerCase();
+        if (!phrase) return false;
+        if (riskPhrases.includes(phrase)) return false; // no duplicates
+        riskPhrases.push(phrase);
+        renderPhraseList();
+        return true;
+      }
 
       // ── Helpers ──────────────────────────────────────────────────────────────
       function $(id) { return document.getElementById(id); }
@@ -812,9 +911,7 @@
         const selectedQueues = queueDropdown ? queueDropdown.getSelectedValues() : [];
         if (!selectedQueues.length) { showMessage('Please select at least one queue to monitor', 'error'); return; }
 
-        const phrasesInput = $('riskPhrases').value;
-        riskPhrases = phrasesInput.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
-        if (!riskPhrases.length) { showMessage('Please enter at least one risk phrase', 'error'); return; }
+        if (!riskPhrases.length) { showMessage('Please add at least one risk phrase in the ⚠️ Risk Phrases tab', 'error'); return; }
 
         selectedQueuesCache = [...selectedQueues];
 
@@ -970,6 +1067,38 @@
               .map(q => ({ value: q.id, label: q.name }))
               .sort((a, b) => a.label.localeCompare(b.label))
           );
+
+          // Phrase manager
+          $('addPhraseBtn').addEventListener('click', () => {
+            const input = $('newPhraseInput');
+            if (addPhrase(input.value)) {
+              input.value = '';
+              input.focus();
+            } else if (input.value.trim()) {
+              showMessage('That phrase already exists', 'info');
+            }
+          });
+
+          $('newPhraseInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') $('addPhraseBtn').click();
+          });
+
+          $('bulkImportBtn').addEventListener('click', () => {
+            const lines = $('bulkPhraseInput').value.split('\n');
+            let added = 0;
+            lines.forEach(l => { if (addPhrase(l)) added++; });
+            $('bulkPhraseInput').value = '';
+            showMessage(`Imported ${added} phrase${added !== 1 ? 's' : ''}`, added > 0 ? 'success' : 'info');
+          });
+
+          $('clearPhrasesBtn').addEventListener('click', () => {
+            if (confirm('Clear all risk phrases?')) {
+              riskPhrases = [];
+              renderPhraseList();
+            }
+          });
+
+          renderPhraseList();
 
           $('manualSubBtn').addEventListener('click', async () => {
             const convId = $('manualConvId').value.trim();
