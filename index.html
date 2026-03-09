@@ -171,6 +171,44 @@
     .refresh-btn:hover { background:#5a6268; }
     .channel-info { flex:1;background:var(--light-bg);padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px; }
 
+    /* Risk row colouring */
+    .risk-row-low    td { background-color: #f0fdf4 !important; }
+    .risk-row-medium td { background-color: #fffbeb !important; }
+    .risk-row-high   td { background-color: #fef2f2 !important; }
+    .frozen-table tr.risk-row-low    td:first-child { background-color: #f0fdf4 !important; }
+    .frozen-table tr.risk-row-medium td:first-child { background-color: #fffbeb !important; }
+    .frozen-table tr.risk-row-high   td:first-child { background-color: #fef2f2 !important; }
+
+    /* Risk level badges */
+    .risk-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .risk-badge-low    { background: #dcfce7; color: #14532d; border: 1px solid #bbf7d0; }
+    .risk-badge-medium { background: #fef9c3; color: #713f12; border: 1px solid #fde68a; }
+    .risk-badge-high   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
+
+    /* Phrase level select in phrase manager */
+    .phrase-level-select {
+      padding: 4px 8px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Conversation link */
+    .conv-link {
+      color: var(--primary-color);
+      font-family: monospace;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .conv-link:hover { text-decoration: underline; }
+
     /* Phrase list */
     .phrase-item {
       display: flex;
@@ -224,7 +262,7 @@
     <div id="messageContainer"></div>
 
     <div class="main-tab-container">
-      <button class="main-tab-button active" data-tab="tab-dashboard">Live Transcription Monitor</button>
+      <button class="main-tab-button active" data-tab="tab-dashboard">🚦Live Transcription Monitor</button>
       <button class="main-tab-button" data-tab="tab-phrases">⚠️ Risk Phrases</button>
       <button class="main-tab-button" data-tab="tab-guide">Configuration Guide</button>
     </div>
@@ -295,11 +333,11 @@
           <table class="frozen-table" id="notificationTable">
             <thead>
               <tr>
-                <th>Time</th><th>Conversation ID</th><th>Queue</th><th>Agent</th><th>Channel</th><th>Detected Phrase</th><th>Transcript</th>
+                <th>Time</th><th>Risk</th><th>Conversation</th><th>Queue</th><th>Agent</th><th>Customer</th><th>Detected Phrase</th><th>Transcript</th>
               </tr>
             </thead>
             <tbody id="notificationTableBody">
-              <tr><td colspan="7" class="muted" style="text-align:center;">No notifications yet. Select queues and click Start Monitoring.</td></tr>
+              <tr><td colspan="8" class="muted" style="text-align:center;">No notifications yet. Select queues and click Start Monitoring.</td></tr>
             </tbody>
           </table>
         </div>
@@ -318,10 +356,18 @@
         <!-- Add new phrase -->
         <div style="display:flex;gap:8px;margin-bottom:20px;margin-top:16px;align-items:flex-end;">
           <div style="flex:1;">
-            <label for="newPhraseInput">Add a phrase</label>
+            <label for="newPhraseInput">Phrase</label>
             <input id="newPhraseInput" type="text" placeholder="e.g. speak to a manager" style="width:100%;box-sizing:border-box;">
           </div>
-          <button id="addPhraseBtn" style="padding:10px 20px;white-space:nowrap;">+ Add Phrase</button>
+          <div>
+            <label for="newPhraseLevel">Risk Level</label>
+            <select id="newPhraseLevel" style="padding:10px;">
+              <option value="low">🟢 Low</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+          </div>
+          <button id="addPhraseBtn" style="padding:10px 20px;white-space:nowrap;">+ Add</button>
         </div>
 
         <!-- Phrase list -->
@@ -402,13 +448,27 @@
       let selectedQueuesCache = [];          // cache so reconnect knows which queues
       const maxReconnectAttempts = 5;
 
-      // Default phrases — displayed in the Risk Phrases tab as individual entries
+      // Default phrases — each has a phrase string and a risk level: low | medium | high
       let riskPhrases = [
-        'complaint', 'lawsuit', 'cancel', 'refund', 'chargeback',
-        'supervisor', 'escalate', 'terminate', 'breach', 'fraud'
+        { phrase: 'complaint',  level: 'medium' },
+        { phrase: 'lawsuit',    level: 'high'   },
+        { phrase: 'cancel',     level: 'low'    },
+        { phrase: 'refund',     level: 'low'    },
+        { phrase: 'chargeback', level: 'high'   },
+        { phrase: 'supervisor', level: 'medium' },
+        { phrase: 'escalate',   level: 'medium' },
+        { phrase: 'terminate',  level: 'high'   },
+        { phrase: 'breach',     level: 'high'   },
+        { phrase: 'fraud',      level: 'high'   },
       ];
 
       // ── Phrase Manager ────────────────────────────────────────────────────────
+      const levelConfig = {
+        low:    { label: 'Low',    icon: '🟢', badge: 'badge-risk-low'    },
+        medium: { label: 'Medium', icon: '🟡', badge: 'badge-risk-medium' },
+        high:   { label: 'High',   icon: '🔴', badge: 'badge-risk-high'   },
+      };
+
       function renderPhraseList() {
         const list = $('phraseList');
         $('phraseCount').textContent = `${riskPhrases.length} phrase${riskPhrases.length !== 1 ? 's' : ''} configured`;
@@ -418,12 +478,23 @@
           return;
         }
 
-        list.innerHTML = riskPhrases.map((phrase, i) => `
+        list.innerHTML = riskPhrases.map((p, i) => `
           <div class="phrase-item">
-            <span class="phrase-text">${escapeHtml(phrase)}</span>
+            <span class="phrase-text">${escapeHtml(p.phrase)}</span>
+            <select class="phrase-level-select" data-index="${i}">
+              <option value="low"    ${p.level === 'low'    ? 'selected' : ''}>🟢 Low</option>
+              <option value="medium" ${p.level === 'medium' ? 'selected' : ''}>🟡 Medium</option>
+              <option value="high"   ${p.level === 'high'   ? 'selected' : ''}>🔴 High</option>
+            </select>
             <button class="phrase-delete" data-index="${i}" title="Remove phrase">×</button>
           </div>
         `).join('');
+
+        list.querySelectorAll('.phrase-level-select').forEach(sel => {
+          sel.addEventListener('change', () => {
+            riskPhrases[parseInt(sel.dataset.index)].level = sel.value;
+          });
+        });
 
         list.querySelectorAll('.phrase-delete').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -437,11 +508,11 @@
         return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
 
-      function addPhrase(raw) {
+      function addPhrase(raw, level = 'medium') {
         const phrase = raw.trim().toLowerCase();
         if (!phrase) return false;
-        if (riskPhrases.includes(phrase)) return false; // no duplicates
-        riskPhrases.push(phrase);
+        if (riskPhrases.some(p => p.phrase === phrase)) return false;
+        riskPhrases.push({ phrase, level });
         renderPhraseList();
         return true;
       }
@@ -828,15 +899,15 @@
         log(`Transcript [${channel}]: "${transcriptText.substring(0, 60)}${transcriptText.length > 60 ? '…' : ''}"`, 'info');
 
         // Risk phrase check
-        const detectedPhrase = detectRiskPhrase(transcriptText);
-        if (!detectedPhrase) return;
+        const detected = detectRiskPhrase(transcriptText);
+        if (!detected) return;
 
         // Look up queue and participant info from our stored maps
-        const queueId    = convQueueMap[conversationId]           || null;
-        const participant = convParticipantMap[conversationId]    || {};
-        const agentId    = participant.agentId                    || 'unknown';
-        const agentName  = participant.agentName                  || 'Unknown Agent';
-        const customer   = participant.customer                   || 'Unknown Customer';
+        const queueId     = convQueueMap[conversationId]        || null;
+        const participant = convParticipantMap[conversationId]  || {};
+        const agentId     = participant.agentId                 || 'unknown';
+        const agentName   = participant.agentName               || 'Unknown Agent';
+        const customer    = participant.customer                 || 'Unknown Customer';
 
         const notifEvent = {
           id:             Date.now() + '-' + Math.random(),
@@ -849,10 +920,11 @@
           customer,
           channel,
           transcript:     transcriptText,
-          phrase:         detectedPhrase
+          phrase:         detected.phrase,
+          riskLevel:      detected.level,
         };
 
-        log(`⚠️ RISK DETECTED: "${detectedPhrase}" in conversation ${conversationId}`, 'warn');
+        log(`⚠️ RISK [${detected.level.toUpperCase()}] "${detected.phrase}" in conversation ${conversationId}`, 'warn');
         notifications.unshift(notifEvent);
         if (notifications.length > 200) notifications.pop();
         renderNotifications();
@@ -868,8 +940,8 @@
       function detectRiskPhrase(text) {
         if (!text || !riskPhrases.length) return null;
         const lower = text.toLowerCase();
-        for (const phrase of riskPhrases) {
-          if (lower.includes(phrase)) return phrase;
+        for (const p of riskPhrases) {
+          if (lower.includes(p.phrase)) return p; // return the full { phrase, level } object
         }
         return null;
       }
@@ -877,19 +949,22 @@
       function renderNotifications() {
         const tbody = $('notificationTableBody');
         if (!notifications.length) {
-          tbody.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;">No risk events detected yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;">No risk events detected yet.</td></tr>';
           return;
         }
         tbody.innerHTML = notifications.map(n => {
           const time      = new Date(n.timestamp).toLocaleTimeString('en-GB');
           const shortId   = n.conversationId.substring(0, 8) + '…';
+          const lc        = levelConfig[n.riskLevel] || levelConfig.medium;
+          const genesysUrl = `https://apps.${region}/directory/#/engage/telephony/interactions/${n.conversationId}`;
           const highlighted = n.transcript.replace(
             new RegExp(`(${n.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
-          return `<tr>
+          return `<tr class="risk-row-${n.riskLevel}">
             <td>${time}</td>
-            <td title="${n.conversationId}">${shortId}</td>
+            <td><span class="risk-badge risk-badge-${n.riskLevel}">${lc.icon} ${lc.label}</span></td>
+            <td><a href="${genesysUrl}" target="_blank" title="${n.conversationId}" class="conv-link">${shortId}</a></td>
             <td>${n.queueName}</td>
             <td>${n.agentName}</td>
             <td>${n.customer || '—'}</td>
@@ -1071,7 +1146,8 @@
           // Phrase manager
           $('addPhraseBtn').addEventListener('click', () => {
             const input = $('newPhraseInput');
-            if (addPhrase(input.value)) {
+            const level = $('newPhraseLevel').value;
+            if (addPhrase(input.value, level)) {
               input.value = '';
               input.focus();
             } else if (input.value.trim()) {
