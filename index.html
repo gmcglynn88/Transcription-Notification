@@ -30,61 +30,71 @@
     tr:hover{background-color:rgba(99,171,143,.05)}
     .table-container{overflow-x:auto;border:1px solid var(--border-color);border-radius:6px;padding:1px;margin-top:10px}
 
-    .frozen-table-container { 
-      position: relative; 
-      overflow: auto; 
-      border: 1px solid var(--border-color); 
-      border-radius: 6px; 
-      margin-top: 10px; 
-      max-height: 600px; 
-      -webkit-overflow-scrolling: touch;
+    /* ── Status bar ─────────────────────────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-color);
+      flex: 1;
+      flex-wrap: wrap;
+    }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot-off      { background: #adb5bd; }
+    .status-dot-connecting { background: #f59e0b; animation: pulse 1s infinite; }
+    .status-dot-on       { background: #22c55e; }
+    .status-dot-error    { background: #ef4444; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .status-divider { color: var(--border-color); }
+
+    /* ── Events table — full width, no horizontal scroll ───────────────── */
+    .events-table-container {
       width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 10px;
     }
-    
-    .frozen-table { 
-      border-collapse: separate; 
-      border-spacing: 0; 
-      width: max-content; 
-      min-width: 100%;
-      background: white;
+    .events-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
     }
-    
-    .frozen-table th, 
-    .frozen-table td { 
-      padding: 10px 12px; 
-      text-align: left; 
-      border-bottom: 1px solid var(--border-color); 
-      vertical-align: top; 
-      white-space: nowrap; 
-      background: white; 
-      position: relative; 
+    .events-table th, .events-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    
-    .frozen-table thead th { 
-      background-color: var(--primary-color); 
-      color: white; 
-      font-weight: 600; 
-      position: sticky; 
-      top: 0; 
-      z-index: 10; 
+    .events-table thead th {
+      background: var(--primary-color);
+      color: white;
+      font-weight: 600;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
     }
-    
-    .frozen-table th:first-child, 
-    .frozen-table td:first-child { 
-      position: sticky; 
-      left: 0; 
-      background: white; 
-      background-clip: padding-box; 
-      z-index: 5; 
-      border-right: 2px solid var(--border-color); 
-      min-width: 220px;
-      box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+    /* Column widths */
+    .events-table .col-time    { width: 70px; white-space: nowrap; }
+    .events-table .col-risk    { width: 90px; }
+    .events-table .col-conv    { width: 90px; }
+    .events-table .col-queue   { width: 130px; }
+    .events-table .col-agent   { width: 120px; }
+    .events-table .col-cust    { width: 120px; }
+    .events-table .col-phrase  { width: 110px; }
+    .events-table .col-transcript { width: auto; }
+    .events-table td.col-transcript {
+      white-space: normal;
+      word-break: break-word;
     }
-    
-    .frozen-table thead th:first-child { 
-      z-index: 15; 
-      background: var(--primary-color); 
-    }
+    .events-table tr:hover td { filter: brightness(0.97); }
 
     .main-tab-container {
       display: flex;
@@ -175,9 +185,6 @@
     .risk-row-low    td { background-color: #f0fdf4 !important; }
     .risk-row-medium td { background-color: #fffbeb !important; }
     .risk-row-high   td { background-color: #fef2f2 !important; }
-    .frozen-table tr.risk-row-low    td:first-child { background-color: #f0fdf4 !important; }
-    .frozen-table tr.risk-row-medium td:first-child { background-color: #fffbeb !important; }
-    .frozen-table tr.risk-row-high   td:first-child { background-color: #fef2f2 !important; }
 
     /* Risk level badges */
     .risk-badge {
@@ -239,7 +246,7 @@
     .phrase-empty { color: var(--text-light); font-size: 13px; padding: 16px; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px; }
 
     /* Debug log */
-    #debugLog { font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 6px; margin-top: 10px; }
+    #debugLog { font-family: monospace; font-size: 12px; min-height: 300px; max-height: 600px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 6px; }
     #debugLog .log-info { color: #9cdcfe; }
     #debugLog .log-success { color: #4ec9b0; }
     #debugLog .log-warn { color: #ce9178; }
@@ -264,6 +271,7 @@
     <div class="main-tab-container">
       <button class="main-tab-button active" data-tab="tab-dashboard">🚦Live Transcription Monitor</button>
       <button class="main-tab-button" data-tab="tab-phrases">⚠️ Risk Phrases</button>
+      <button class="main-tab-button" data-tab="tab-debug">🪲 Debug Log</button>
       <button class="main-tab-button" data-tab="tab-guide">Configuration Guide</button>
     </div>
 
@@ -292,32 +300,33 @@
           </div>
         </div>
         
+        <!-- Slim status bar -->
         <div class="refresh-section">
-          <div class="channel-info">
-            <div><strong>Channel ID:</strong> <span id="channelId">—</span></div>
-            <div><strong>Status:</strong> <span id="connectionStatus">Not connected</span></div>
-            <div><strong>WebSocket:</strong> <span id="websocketState">Closed</span></div>
-            <div><strong>Active Queues:</strong> <span id="activeQueueCount">0</span></div>
-            <div><strong>Tracked Conversations:</strong> <span id="trackedConversations">0</span></div>
+          <div class="status-bar">
+            <span id="statusDot" class="status-dot status-dot-off"></span>
+            <span id="statusLabel">Not connected</span>
+            <span class="status-divider">|</span>
+            <span id="activeQueueCount">0</span> queue<span id="queuePlural">s</span> monitored
+            <span class="status-divider">|</span>
+            <span id="trackedConversations">0</span> active conversation<span id="convPlural">s</span>
           </div>
-          <button id="refreshChannelBtn" class="full-width-btn refresh-btn" disabled>
-            <span class="loading-spinner" style="display:none;"></span>
-            <span class="btn-text">🔄 Reconnect</span>
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button id="refreshChannelBtn" class="refresh-btn" style="padding:10px 16px;" disabled>
+              <span class="loading-spinner" style="display:none;"></span>
+              <span class="btn-text">🔄 Reconnect</span>
+            </button>
+            <button id="manualSubBtn" style="padding:10px 16px;background:var(--text-light);" disabled>+ Conv ID</button>
+          </div>
         </div>
 
-        <!-- Manual conversation ID override -->
-        <div style="margin-top:16px; padding:12px; background:#f8f9fa; border:1px dashed var(--border-color); border-radius:8px;">
-          <label style="font-size:13px; color:var(--text-light);">🔧 Manual override — subscribe to a specific conversation ID</label>
-          <div style="display:flex; gap:8px; margin-top:6px;">
-            <input id="manualConvId" type="text" placeholder="Paste conversation UUID here…" style="flex:1; font-family:monospace; font-size:13px;">
-            <button id="manualSubBtn" style="white-space:nowrap; padding:10px 16px;" disabled>Subscribe</button>
+        <!-- Manual conv ID (hidden until needed) -->
+        <div id="manualConvPanel" style="display:none;margin-top:10px;padding:12px;background:#f8f9fa;border:1px dashed var(--border-color);border-radius:8px;">
+          <div style="display:flex;gap:8px;">
+            <input id="manualConvId" type="text" placeholder="Paste conversation UUID…" style="flex:1;font-family:monospace;font-size:13px;">
+            <button id="manualSubConfirmBtn" style="padding:10px 16px;">Subscribe</button>
           </div>
-          <div class="muted" style="margin-top:4px;">Use this if the queue event doesn't fire — paste the conversation ID from Genesys UI to force-subscribe to its transcription.</div>
+          <div class="muted" style="margin-top:4px;">Force-subscribe to a specific conversation's transcription.</div>
         </div>
-          <summary style="cursor:pointer;font-size:13px;color:var(--text-light);">🪲 Debug Log</summary>
-          <div id="debugLog"></div>
-        </details>
       </div>
 
       <div class="card">
@@ -329,11 +338,18 @@
           <div class="kpi"><span class="label">Queues</span><span class="value" id="statQueues">0</span></div>
         </div>
 
-        <div class="frozen-table-container">
-          <table class="frozen-table" id="notificationTable">
+        <div class="events-table-container">
+          <table class="events-table" id="notificationTable">
             <thead>
               <tr>
-                <th>Time</th><th>Risk</th><th>Conversation</th><th>Queue</th><th>Agent</th><th>Customer</th><th>Detected Phrase</th><th>Transcript</th>
+                <th class="col-time">Time</th>
+                <th class="col-risk">Risk</th>
+                <th class="col-conv">Interaction</th>
+                <th class="col-queue">Queue</th>
+                <th class="col-agent">Agent</th>
+                <th class="col-cust">Customer</th>
+                <th class="col-phrase">Phrase</th>
+                <th class="col-transcript">Transcript</th>
               </tr>
             </thead>
             <tbody id="notificationTableBody">
@@ -384,6 +400,17 @@
           <span class="muted" id="phraseCount">0 phrases configured</span>
           <button id="clearPhrasesBtn" style="background:var(--text-light);margin-left:auto;padding:8px 14px;font-size:13px;">Clear All</button>
         </div>
+      </div>
+    </div>
+
+    <div id="tab-debug" class="main-tab-content">
+      <div class="card">
+        <h2 class="section-title">🪲 Debug Log</h2>
+        <p class="muted">Live WebSocket and polling activity. Useful for diagnosing missed calls or transcription issues.</p>
+        <div style="display:flex;gap:8px;margin-bottom:10px;margin-top:12px;">
+          <button id="clearDebugBtn" style="background:var(--text-light);padding:8px 14px;font-size:13px;">Clear Log</button>
+        </div>
+        <div id="debugLog"></div>
       </div>
     </div>
 
@@ -541,15 +568,29 @@
         console.log(`[${level}] ${msg}`);
       }
 
-      function updateWebsocketState(state) { $('websocketState').innerText = state; }
+      function updateWebsocketState(state) {
+        // Map state to dot indicator
+        const dot = $('statusDot');
+        const lbl = $('statusLabel');
+        if (!dot) return;
+        dot.className = 'status-dot';
+        if (state === 'Connected')      { dot.classList.add('status-dot-on');         lbl.textContent = 'Connected'; }
+        else if (state === 'Connecting…') { dot.classList.add('status-dot-connecting'); lbl.textContent = 'Connecting…'; }
+        else if (state === 'Error')     { dot.classList.add('status-dot-error');      lbl.textContent = 'Error'; }
+        else                            { dot.classList.add('status-dot-off');        lbl.textContent = 'Not connected'; }
+      }
 
       function updateActiveQueueCount() {
         const selected = queueDropdown ? queueDropdown.getSelectedValues() : [];
-        $('activeQueueCount').innerText = selected.length;
+        const n = selected.length;
+        $('activeQueueCount').innerText = n;
+        if ($('queuePlural')) $('queuePlural').textContent = n === 1 ? '' : 's';
       }
 
       function updateTrackedConversations() {
-        $('trackedConversations').innerText = trackedConvIds.size;
+        const n = trackedConvIds.size;
+        $('trackedConversations').innerText = n;
+        if ($('convPlural')) $('convPlural').textContent = n === 1 ? '' : 's';
       }
 
       function enableRefreshButton(enabled) { $('refreshChannelBtn').disabled = !enabled; }
@@ -775,7 +816,6 @@
 
         webSocket.onopen = () => {
           log('WebSocket connected', 'success');
-          $('connectionStatus').innerText = 'Connected';
           updateWebsocketState('Connected');
           reconnectAttempts = 0;
           enableRefreshButton(true);
@@ -817,14 +857,12 @@
 
         webSocket.onerror = (error) => {
           log('WebSocket error', 'error');
-          $('connectionStatus').innerText = 'Error';
           updateWebsocketState('Error');
           showMessage('WebSocket connection error', 'error');
         };
 
         webSocket.onclose = () => {
           log('WebSocket closed', 'warn');
-          $('connectionStatus').innerText = 'Disconnected';
           updateWebsocketState('Closed');
 
           if (isMonitoring && reconnectAttempts < maxReconnectAttempts) {
@@ -949,27 +987,28 @@
       function renderNotifications() {
         const tbody = $('notificationTableBody');
         if (!notifications.length) {
-          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;">No risk events detected yet.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:20px;">No risk events detected yet.</td></tr>';
           return;
         }
         tbody.innerHTML = notifications.map(n => {
           const time      = new Date(n.timestamp).toLocaleTimeString('en-GB');
           const shortId   = n.conversationId.substring(0, 8) + '…';
           const lc        = levelConfig[n.riskLevel] || levelConfig.medium;
-          const genesysUrl = `https://apps.${region}/directory/#/engage/telephony/interactions/${n.conversationId}`;
+          // Correct Genesys interaction URL format
+          const genesysUrl = `https://apps.${region}/directory/#/analytics/interactions/${n.conversationId}/admin`;
           const highlighted = n.transcript.replace(
             new RegExp(`(${n.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
             '<span class="highlight-risk">$1</span>'
           );
           return `<tr class="risk-row-${n.riskLevel}">
-            <td>${time}</td>
-            <td><span class="risk-badge risk-badge-${n.riskLevel}">${lc.icon} ${lc.label}</span></td>
-            <td><a href="${genesysUrl}" target="_blank" title="${n.conversationId}" class="conv-link">${shortId}</a></td>
-            <td>${n.queueName}</td>
-            <td>${n.agentName}</td>
-            <td>${n.customer || '—'}</td>
-            <td><span class="badge badge-info">${n.phrase}</span></td>
-            <td><div class="transcript-preview">${highlighted}</div></td>
+            <td class="col-time">${time}</td>
+            <td class="col-risk"><span class="risk-badge risk-badge-${n.riskLevel}">${lc.icon} ${lc.label}</span></td>
+            <td class="col-conv"><a href="${genesysUrl}" target="_blank" title="Open interaction ${n.conversationId}" class="conv-link">${shortId} ↗</a></td>
+            <td class="col-queue" title="${n.queueName}">${n.queueName}</td>
+            <td class="col-agent" title="${n.agentName}">${n.agentName}</td>
+            <td class="col-cust" title="${n.customer || '—'}">${n.customer || '—'}</td>
+            <td class="col-phrase"><span class="badge badge-info">${n.phrase}</span></td>
+            <td class="col-transcript"><div class="transcript-preview">${highlighted}</div></td>
           </tr>`;
         }).join('');
       }
@@ -1002,7 +1041,6 @@
           log('Creating notification channel…', 'info');
           const channel = await createNotificationChannel();
           notificationChannel = channel;
-          $('channelId').innerText = channel.id;
           log(`Channel created: ${channel.id}`, 'success');
 
           // Step 2: Connect WebSocket — transcription topics will be added
@@ -1018,9 +1056,8 @@
 
           $('subscribeBtn').disabled  = true;
           $('unsubscribeBtn').disabled = false;
-          $('manualSubBtn').disabled   = false;
           enableRefreshButton(true);
-          $('connectionStatus').innerText = 'Connecting…';
+          updateWebsocketState('Connecting…');
 
           showMessage('✅ Monitoring started — polling for active calls every 5s…', 'success');
         } catch (err) {
@@ -1043,12 +1080,9 @@
         convQueueMap       = {};
         convParticipantMap = {};
         updateTrackedConversations();
-        $('channelId').innerText        = '—';
-        $('connectionStatus').innerText = 'Not connected';
         updateWebsocketState('Closed');
         $('subscribeBtn').disabled       = false;
         $('unsubscribeBtn').disabled     = true;
-        $('manualSubBtn').disabled       = true;
         enableRefreshButton(false);
         showMessage('Stopped monitoring', 'success');
         log('Monitoring stopped', 'warn');
@@ -1176,7 +1210,13 @@
 
           renderPhraseList();
 
-          $('manualSubBtn').addEventListener('click', async () => {
+          // Manual conv ID — toggle panel visibility
+          $('manualSubBtn').addEventListener('click', () => {
+            const panel = $('manualConvPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+          });
+
+          $('manualSubConfirmBtn').addEventListener('click', async () => {
             const convId = $('manualConvId').value.trim();
             if (!convId) { showMessage('Enter a conversation ID first', 'error'); return; }
             if (!notificationChannel) { showMessage('Start monitoring first', 'error'); return; }
@@ -1188,6 +1228,7 @@
               log(`✓ Manually subscribed to transcription for ${convId}`, 'success');
               showMessage(`Subscribed to conversation ${convId.substring(0,8)}…`, 'success');
               $('manualConvId').value = '';
+              $('manualConvPanel').style.display = 'none';
             } catch(e) {
               trackedConvIds.delete(convId);
               updateTrackedConversations();
@@ -1195,6 +1236,8 @@
               showMessage('Failed: ' + e.message, 'error');
             }
           });
+
+          $('clearDebugBtn').addEventListener('click', () => { $('debugLog').innerHTML = ''; });
 
           $('subscribeBtn').addEventListener('click', handleSubscribe);
           $('unsubscribeBtn').addEventListener('click', handleUnsubscribe);
