@@ -243,8 +243,15 @@
           </button>
         </div>
 
-        <!-- Debug log -->
-        <details style="margin-top:12px;">
+        <!-- Manual conversation ID override -->
+        <div style="margin-top:16px; padding:12px; background:#f8f9fa; border:1px dashed var(--border-color); border-radius:8px;">
+          <label style="font-size:13px; color:var(--text-light);">🔧 Manual override — subscribe to a specific conversation ID</label>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <input id="manualConvId" type="text" placeholder="Paste conversation UUID here…" style="flex:1; font-family:monospace; font-size:13px;">
+            <button id="manualSubBtn" style="white-space:nowrap; padding:10px 16px;" disabled>Subscribe</button>
+          </div>
+          <div class="muted" style="margin-top:4px;">Use this if the queue event doesn't fire — paste the conversation ID from Genesys UI to force-subscribe to its transcription.</div>
+        </div>
           <summary style="cursor:pointer;font-size:13px;color:var(--text-light);">🪲 Debug Log</summary>
           <div id="debugLog"></div>
         </details>
@@ -540,6 +547,9 @@
             const topic   = message.topicName || '';
             const body    = message.eventBody  || {};
 
+            // Dump EVERYTHING to console so nothing is invisible
+            console.log('[WS RAW]', topic, message);
+
             // Always log raw topic so you can see what's arriving
             log(`MSG: ${topic}`);
 
@@ -561,11 +571,11 @@
               // conversationId: Genesys puts it at eventBody.id
               const conversationId = body.id || body.conversationId;
 
-              log(`Queue event — queueId: ${queueId}, conversationId: ${conversationId}, raw body keys: ${Object.keys(body).join(', ')}`, 'info');
+              log(`Queue event — queueId: ${queueId}, conversationId: ${conversationId}, body keys: [${Object.keys(body).join(', ')}]`, 'info');
 
               if (!conversationId) {
-                log('⚠ Could not extract conversationId from queue event body. Full body logged to console.', 'warn');
-                console.warn('Queue event body:', JSON.stringify(body, null, 2));
+                log(`⚠ No conversationId found. body.id=${body.id} body.conversationId=${body.conversationId}. Check console for full body.`, 'warn');
+                console.warn('[Queue body - missing conversationId]', JSON.stringify(body, null, 2));
                 return;
               }
 
@@ -827,6 +837,7 @@
 
           $('subscribeBtn').disabled  = true;
           $('unsubscribeBtn').disabled = false;
+          $('manualSubBtn').disabled   = false;
           enableRefreshButton(true);
           $('connectionStatus').innerText = 'Connecting…';
 
@@ -855,6 +866,7 @@
         updateWebsocketState('Closed');
         $('subscribeBtn').disabled       = false;
         $('unsubscribeBtn').disabled     = true;
+        $('manualSubBtn').disabled       = true;
         enableRefreshButton(false);
         showMessage('Stopped monitoring', 'success');
         log('Monitoring stopped', 'warn');
@@ -947,6 +959,26 @@
               .map(q => ({ value: q.id, label: q.name }))
               .sort((a, b) => a.label.localeCompare(b.label))
           );
+
+          $('manualSubBtn').addEventListener('click', async () => {
+            const convId = $('manualConvId').value.trim();
+            if (!convId) { showMessage('Enter a conversation ID first', 'error'); return; }
+            if (!notificationChannel) { showMessage('Start monitoring first', 'error'); return; }
+            if (trackedConvIds.has(convId)) { showMessage('Already subscribed to that conversation', 'info'); return; }
+            try {
+              trackedConvIds.add(convId);
+              updateTrackedConversations();
+              await postSubscriptions(notificationChannel.id, [`v2.conversations.${convId}.transcription`]);
+              log(`✓ Manually subscribed to transcription for ${convId}`, 'success');
+              showMessage(`Subscribed to conversation ${convId.substring(0,8)}…`, 'success');
+              $('manualConvId').value = '';
+            } catch(e) {
+              trackedConvIds.delete(convId);
+              updateTrackedConversations();
+              log(`✗ Manual subscribe failed: ${e.message}`, 'error');
+              showMessage('Failed: ' + e.message, 'error');
+            }
+          });
 
           $('subscribeBtn').addEventListener('click', handleSubscribe);
           $('unsubscribeBtn').addEventListener('click', handleUnsubscribe);
